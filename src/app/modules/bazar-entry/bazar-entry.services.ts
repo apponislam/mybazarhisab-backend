@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import httpStatus from "http-status";
 import ApiError from "../../../errors/ApiError";
+import { UserModel } from "../auth/auth.model";
 import { ProductModel } from "../product/product.model";
 import { BazarEntryModel } from "./bazar-entry.model";
 import { BazarEntry, BazarUnit } from "./bazar-entry.interface";
@@ -27,29 +28,31 @@ const createBazarEntry = async (
             throw new ApiError(httpStatus.BAD_REQUEST, "Product name is required");
         }
 
+        // Get user group
+        const user = await UserModel.findOne({ _id: userId, isDeleted: false }).session(session);
+        if (!user) {
+            throw new ApiError(httpStatus.NOT_FOUND, "User not found");
+        }
+        const groupId = user.groupId;
+
         let product = null;
 
-        // 1. If productId is provided from frontend dropdown, verify it exists
+        // 1. If productId is provided from frontend dropdown, verify it exists globally
         if (productId && mongoose.Types.ObjectId.isValid(productId)) {
-            product = await ProductModel.findOne({
-                _id: productId,
-                user: userId,
-                isDeleted: false,
-            }).session(session);
+            product = await ProductModel.findOne({ _id: productId, isDeleted: false }).session(session);
         }
 
         // 2. If no product was found by id, fallback to lookup by name (case-insensitive) to prevent duplicates
         if (!product) {
             product = await ProductModel.findOne({
                 name: { $regex: new RegExp("^" + name.trim() + "$", "i") },
-                user: userId,
                 isDeleted: false,
             }).session(session);
         }
 
-        // 3. If product does not exist, create a new one
+        // 3. If product does not exist, create a new one globally
         if (!product) {
-            const newProducts = await ProductModel.create(
+            const [newProduct] = await ProductModel.create(
                 [
                     {
                         name: name.trim(),
@@ -58,11 +61,11 @@ const createBazarEntry = async (
                 ],
                 { session }
             );
-            product = newProducts[0];
+            product = newProduct;
         }
 
-        // 3. Create daily bazar entry
-        const entries = await BazarEntryModel.create(
+        // 4. Create daily bazar entry under the user's group if they have one
+        const [entry] = await BazarEntryModel.create(
             [
                 {
                     product: product._id,
@@ -72,11 +75,11 @@ const createBazarEntry = async (
                     notes,
                     date,
                     user: userId,
+                    group: groupId || undefined,
                 },
             ],
             { session }
         );
-        const entry = entries[0];
 
         await session.commitTransaction();
         session.endSession();
@@ -93,7 +96,19 @@ const createBazarEntry = async (
 
 const getAllBazarEntries = async (userId: string, query: any) => {
     const { startDate, endDate, page = 1, limit = 10 } = query;
-    const filter: any = { user: userId, isDeleted: false };
+
+    const user = await UserModel.findOne({ _id: userId, isDeleted: false });
+    if (!user) {
+        throw new ApiError(httpStatus.NOT_FOUND, "User not found");
+    }
+    const groupId = user.groupId;
+
+    const filter: any = { isDeleted: false };
+    if (groupId) {
+        filter.group = groupId;
+    } else {
+        filter.user = userId;
+    }
 
     if (startDate || endDate) {
         filter.date = {};
@@ -136,11 +151,20 @@ const getAllBazarEntries = async (userId: string, query: any) => {
 };
 
 const getBazarEntryById = async (userId: string, id: string) => {
-    const entry = await BazarEntryModel.findOne({
-        _id: id,
-        user: userId,
-        isDeleted: false,
-    }).populate("product");
+    const user = await UserModel.findOne({ _id: userId, isDeleted: false });
+    if (!user) {
+        throw new ApiError(httpStatus.NOT_FOUND, "User not found");
+    }
+    const groupId = user.groupId;
+
+    const filter: any = { _id: id, isDeleted: false };
+    if (groupId) {
+        filter.group = groupId;
+    } else {
+        filter.user = userId;
+    }
+
+    const entry = await BazarEntryModel.findOne(filter).populate("product");
 
     if (!entry) {
         throw new ApiError(httpStatus.NOT_FOUND, "Bazar entry not found");
@@ -150,8 +174,21 @@ const getBazarEntryById = async (userId: string, id: string) => {
 };
 
 const updateBazarEntry = async (userId: string, id: string, data: Partial<BazarEntry>) => {
+    const user = await UserModel.findOne({ _id: userId, isDeleted: false });
+    if (!user) {
+        throw new ApiError(httpStatus.NOT_FOUND, "User not found");
+    }
+    const groupId = user.groupId;
+
+    const filter: any = { _id: id, isDeleted: false };
+    if (groupId) {
+        filter.group = groupId;
+    } else {
+        filter.user = userId;
+    }
+
     const entry = await BazarEntryModel.findOneAndUpdate(
-        { _id: id, user: userId, isDeleted: false },
+        filter,
         { $set: data },
         { new: true, runValidators: true }
     ).populate("product");
@@ -164,8 +201,21 @@ const updateBazarEntry = async (userId: string, id: string, data: Partial<BazarE
 };
 
 const deleteBazarEntry = async (userId: string, id: string) => {
+    const user = await UserModel.findOne({ _id: userId, isDeleted: false });
+    if (!user) {
+        throw new ApiError(httpStatus.NOT_FOUND, "User not found");
+    }
+    const groupId = user.groupId;
+
+    const filter: any = { _id: id, isDeleted: false };
+    if (groupId) {
+        filter.group = groupId;
+    } else {
+        filter.user = userId;
+    }
+
     const entry = await BazarEntryModel.findOneAndUpdate(
-        { _id: id, user: userId, isDeleted: false },
+        filter,
         { $set: { isDeleted: true } },
         { new: true }
     );

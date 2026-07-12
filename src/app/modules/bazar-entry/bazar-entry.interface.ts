@@ -10,6 +10,7 @@ export interface BazarEntry {
     date: Date;
     notes?: string;
     user: Types.ObjectId;
+    group?: Types.ObjectId;
     isDeleted: boolean;
     createdAt: Date;
     updatedAt: Date;

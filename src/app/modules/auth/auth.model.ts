@@ -70,6 +70,11 @@ const userSchemaDefinition: any = {
         type: Date,
     },
 
+    groupId: {
+        type: Schema.Types.ObjectId,
+        ref: "Group",
+    },
+
     resetPasswordOtp: String,
     resetPasswordOtpExpiry: Date,
     resetPasswordToken: String,

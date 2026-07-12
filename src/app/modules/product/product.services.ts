@@ -13,7 +13,8 @@ const createProduct = async (userId: string, data: Partial<Product>) => {
 
 const getAllProducts = async (userId: string, query: any) => {
     const { searchTerm, page = 1, limit = 10 } = query;
-    const filter: any = { user: userId, isDeleted: false };
+
+    const filter: any = { isDeleted: false };
 
     if (searchTerm) {
         filter.name = { $regex: searchTerm, $options: "i" };
@@ -39,11 +40,7 @@ const getAllProducts = async (userId: string, query: any) => {
 };
 
 const getProductById = async (userId: string, productId: string) => {
-    const product = await ProductModel.findOne({
-        _id: productId,
-        user: userId,
-        isDeleted: false,
-    });
+    const product = await ProductModel.findOne({ _id: productId, isDeleted: false });
 
     if (!product) {
         throw new ApiError(httpStatus.NOT_FOUND, "Product not found");
@@ -54,7 +51,7 @@ const getProductById = async (userId: string, productId: string) => {
 
 const updateProduct = async (userId: string, productId: string, data: Partial<Product>) => {
     const product = await ProductModel.findOneAndUpdate(
-        { _id: productId, user: userId, isDeleted: false },
+        { _id: productId, isDeleted: false },
         { $set: data },
         { new: true, runValidators: true }
     );
@@ -68,7 +65,7 @@ const updateProduct = async (userId: string, productId: string, data: Partial<Pr
 
 const deleteProduct = async (userId: string, productId: string) => {
     const product = await ProductModel.findOneAndUpdate(
-        { _id: productId, user: userId, isDeleted: false },
+        { _id: productId, isDeleted: false },
         { $set: { isDeleted: true } },
         { new: true }
     );

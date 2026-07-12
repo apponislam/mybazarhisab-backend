@@ -38,6 +38,10 @@ const bazarEntrySchema = new Schema<BazarEntry>(
             ref: "User",
             required: [true, "User ID is required"],
         },
+        group: {
+            type: Schema.Types.ObjectId,
+            ref: "Group",
+        },
         isDeleted: {
             type: Boolean,
             default: false,
@@ -51,6 +55,7 @@ const bazarEntrySchema = new Schema<BazarEntry>(
 
 // Indexes
 bazarEntrySchema.index({ user: 1, date: -1 });
+bazarEntrySchema.index({ group: 1, date: -1 });
 bazarEntrySchema.index({ product: 1 });
 
 export const BazarEntryModel = mongoose.model<BazarEntry>("BazarEntry", bazarEntrySchema);
