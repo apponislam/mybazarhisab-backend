@@ -16,7 +16,7 @@ const billSchema = new Schema<Bill>(
             type: String,
             required: [true, "Category is required"],
             enum: {
-                values: ["RENT", "TRAVEL", "WIFI", "ELECTRICITY", "UTILITIES", "OTHERS"],
+                values: ["RENT", "TRAVEL", "WIFI", "ELECTRICITY", "GAS", "WATER", "MAID", "MAINTENANCE", "SUBSCRIPTION", "MOBILE", "MEDICAL", "EDUCATION", "SHOPPING", "ENTERTAINMENT", "LAUNDRY", "LOAN_EMI", "SALON_GROOMING", "GIFTS_FESTIVALS", "UTILITIES", "OTHERS"],
                 message: "{VALUE} is not a valid category",
             },
         },
