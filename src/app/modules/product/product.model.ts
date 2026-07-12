@@ -8,11 +8,7 @@ const productSchema = new Schema<Product>(
             required: [true, "Product name is required"],
             trim: true,
         },
-        price: {
-            type: Number,
-            required: [true, "Product price is required"],
-            min: [0, "Price cannot be negative"],
-        },
+
         unit: {
             type: String,
             required: [true, "Unit of measurement is required"],

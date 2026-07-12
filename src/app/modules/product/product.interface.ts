@@ -4,7 +4,6 @@ export type ProductUnit = "KG" | "LITER" | "PIECE" | "GM";
 
 export interface Product {
     name: string;
-    price: number;
     unit: ProductUnit;
     photo?: string;
     is18Plus?: boolean;
