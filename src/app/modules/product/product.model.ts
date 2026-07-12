@@ -9,13 +9,6 @@ const productSchema = new Schema<Product>(
             trim: true,
         },
 
-        unit: {
-            type: String,
-            required: [true, "Unit of measurement is required"],
-            enum: ["KG", "LITER", "PIECE", "GM"],
-            trim: true,
-        },
-
         photo: {
             type: String,
             trim: true,
