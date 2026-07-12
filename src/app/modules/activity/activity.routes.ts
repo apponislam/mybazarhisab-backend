@@ -5,7 +5,7 @@ import { activityControllers } from "./activity.controllers";
 
 const router = Router();
 
-router.get("/", auth, activityControllers.getAllActivities);
+router.get("/", auth, authorize(["ADMIN"]), activityControllers.getAllActivities);
 
 // Delete operations are restricted to ADMIN users only
 router.delete("/", auth, authorize(["ADMIN"]), activityControllers.clearActivities);

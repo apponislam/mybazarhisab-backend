@@ -5,8 +5,7 @@ import sendResponse from "../../../utils/sendResponse";
 import { activityServices } from "./activity.services";
 
 const getAllActivities = catchAsync(async (req: Request, res: Response) => {
-    const userId = req.user._id;
-    const result = await activityServices.getAllActivities(userId.toString(), req.user.groupId?.toString(), req.query);
+    const result = await activityServices.getAllActivities(req.query);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,

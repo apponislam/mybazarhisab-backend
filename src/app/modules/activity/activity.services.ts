@@ -41,18 +41,11 @@ const logActivity = (
 };
 
 const getAllActivities = async (
-    userId: string,
-    groupId: string | undefined,
     query: { page?: string; limit?: string }
 ) => {
     const { page = 1, limit = 20 } = query;
 
     const filter: any = { isDeleted: false };
-    if (groupId) {
-        filter.group = groupId;
-    } else {
-        filter.user = userId;
-    }
 
     const skip = (Number(page) - 1) * Number(limit);
     const activities = await ActivityModel.find(filter)
