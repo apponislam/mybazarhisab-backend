@@ -68,10 +68,23 @@ const deleteProduct = catchAsync(async (req: Request, res: Response) => {
     });
 });
 
+const mergeProducts = catchAsync(async (req: Request, res: Response) => {
+    const { sourceProductId, targetProductId } = req.body;
+    const result = await productServices.mergeProducts(sourceProductId as string, targetProductId as string);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: result.message,
+        data: null,
+    });
+});
+
 export const productControllers = {
     createProduct,
     getAllProducts,
     getProductById,
     updateProduct,
     deleteProduct,
+    mergeProducts,
 };

@@ -1,5 +1,7 @@
 import httpStatus from "http-status";
+import mongoose from "mongoose";
 import ApiError from "../../../errors/ApiError";
+import { BazarEntryModel } from "../bazar-entry/bazar-entry.model";
 import { Product } from "./product.interface";
 import { ProductModel } from "./product.model";
 
@@ -80,10 +82,57 @@ const deleteProduct = async (userId: string, productId: string) => {
     return product;
 };
 
+const mergeProducts = async (sourceProductId: string, targetProductId: string) => {
+    if (!mongoose.Types.ObjectId.isValid(sourceProductId) || !mongoose.Types.ObjectId.isValid(targetProductId)) {
+        throw new ApiError(httpStatus.BAD_REQUEST, "Invalid product ID(s)");
+    }
+
+    if (sourceProductId === targetProductId) {
+        throw new ApiError(httpStatus.BAD_REQUEST, "Source and target product IDs cannot be the same");
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        // 1. Verify target product exists
+        const targetProduct = await ProductModel.findOne({ _id: targetProductId, isDeleted: false }).session(session);
+        if (!targetProduct) {
+            throw new ApiError(httpStatus.NOT_FOUND, "Target product not found");
+        }
+
+        // 2. Verify source product exists
+        const sourceProduct = await ProductModel.findOne({ _id: sourceProductId, isDeleted: false }).session(session);
+        if (!sourceProduct) {
+            throw new ApiError(httpStatus.NOT_FOUND, "Source product not found");
+        }
+
+        // 3. Update all BazarEntry documents referencing sourceProductId to targetProductId
+        await BazarEntryModel.updateMany(
+            { product: sourceProductId },
+            { $set: { product: targetProductId } },
+            { session }
+        );
+
+        // 4. Delete the source product permanently
+        await ProductModel.deleteOne({ _id: sourceProductId }).session(session);
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return { message: "Products merged successfully" };
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        throw error;
+    }
+};
+
 export const productServices = {
     createProduct,
     getAllProducts,
     getProductById,
     updateProduct,
     deleteProduct,
+    mergeProducts,
 };
