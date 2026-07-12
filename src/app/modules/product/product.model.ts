@@ -16,9 +16,11 @@ const productSchema = new Schema<Product>(
         unit: {
             type: String,
             required: [true, "Unit of measurement is required"],
+            enum: ["KG", "LITER", "PIECE", "GM"],
             trim: true,
         },
-        category: {
+
+        photo: {
             type: String,
             trim: true,
         },
@@ -49,6 +51,6 @@ const productSchema = new Schema<Product>(
 // Indexes for faster lookups
 productSchema.index({ user: 1, isDeleted: 1 });
 productSchema.index({ name: 1 });
-productSchema.index({ category: 1 });
+
 
 export const ProductModel = mongoose.model<Product>("Product", productSchema);

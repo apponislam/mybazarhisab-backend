@@ -12,15 +12,11 @@ const createProduct = async (userId: string, data: Partial<Product>) => {
 };
 
 const getAllProducts = async (userId: string, query: any) => {
-    const { searchTerm, category, page = 1, limit = 10 } = query;
+    const { searchTerm, page = 1, limit = 10 } = query;
     const filter: any = { user: userId, isDeleted: false };
 
     if (searchTerm) {
         filter.name = { $regex: searchTerm, $options: "i" };
-    }
-
-    if (category) {
-        filter.category = category;
     }
 
     const skip = (Number(page) - 1) * Number(limit);

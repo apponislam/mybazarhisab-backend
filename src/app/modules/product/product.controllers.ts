@@ -32,7 +32,7 @@ const getAllProducts = catchAsync(async (req: Request, res: Response) => {
 const getProductById = catchAsync(async (req: Request, res: Response) => {
     const userId = req.user._id;
     const { id } = req.params;
-    const result = await productServices.getProductById(userId.toString(), id);
+    const result = await productServices.getProductById(userId.toString(), id as string);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
@@ -45,7 +45,7 @@ const getProductById = catchAsync(async (req: Request, res: Response) => {
 const updateProduct = catchAsync(async (req: Request, res: Response) => {
     const userId = req.user._id;
     const { id } = req.params;
-    const result = await productServices.updateProduct(userId.toString(), id, req.body);
+    const result = await productServices.updateProduct(userId.toString(), id as string, req.body);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
@@ -58,7 +58,7 @@ const updateProduct = catchAsync(async (req: Request, res: Response) => {
 const deleteProduct = catchAsync(async (req: Request, res: Response) => {
     const userId = req.user._id;
     const { id } = req.params;
-    const result = await productServices.deleteProduct(userId.toString(), id);
+    const result = await productServices.deleteProduct(userId.toString(), id as string);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
