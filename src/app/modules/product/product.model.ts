@@ -24,6 +24,10 @@ const productSchema = new Schema<Product>(
             type: String,
             trim: true,
         },
+        is18Plus: {
+            type: Boolean,
+            default: false,
+        },
         description: {
             type: String,
             trim: true,

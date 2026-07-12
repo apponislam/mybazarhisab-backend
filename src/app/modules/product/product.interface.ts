@@ -7,7 +7,7 @@ export interface Product {
     price: number;
     unit: ProductUnit;
     photo?: string;
-    "18+"?: boolean;
+    is18Plus?: boolean;
     description?: string;
     user: Types.ObjectId;
     isActive: boolean;
