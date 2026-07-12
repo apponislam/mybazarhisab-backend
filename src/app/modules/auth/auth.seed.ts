@@ -14,11 +14,11 @@ export const seedAdmin = async () => {
             const hashedPassword = await bcrypt.hash(config.superAdminPassword as string, Number(config.bcrypt_salt_rounds));
 
             const admin = {
-                name: "Admin",
+                name: "Appon Islam",
                 email: config.superAdminEmail,
                 password: hashedPassword,
                 role: "ADMIN",
-                phone: "0000000000",
+                phone: "01722779803",
                 isActive: true,
                 isEmailVerified: true,
             };

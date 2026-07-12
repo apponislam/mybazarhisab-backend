@@ -3,6 +3,7 @@ import { authRoutes } from "../modules/auth/auth.routes";
 import { productRoutes } from "../modules/product/product.routes";
 import { bazarEntryRoutes } from "../modules/bazar-entry/bazar-entry.routes";
 import { groupRoutes } from "../modules/group/group.routes";
+import { dashboardRoutes } from "../modules/dashboard/dashboard.routes";
 
 const router = express.Router();
 
@@ -22,6 +23,10 @@ const moduleRoutes = [
     {
         path: "/groups",
         route: groupRoutes,
+    },
+    {
+        path: "/dashboard",
+        route: dashboardRoutes,
     },
 ];
 
