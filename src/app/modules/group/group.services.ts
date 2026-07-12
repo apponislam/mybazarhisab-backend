@@ -4,6 +4,7 @@ import ApiError from "../../../errors/ApiError";
 import { UserModel } from "../auth/auth.model";
 import { GroupModel } from "./group.model";
 import { activityServices } from "../activity/activity.services";
+import { ActivityType } from "../activity/activity.interface";
 
 const createGroup = async (userId: string, name: string) => {
     const session = await mongoose.startSession();
@@ -36,14 +37,13 @@ const createGroup = async (userId: string, name: string) => {
         user.groupId = group._id;
         await user.save({ session });
 
-        // Log activity
-        await activityServices.createActivityLog(
+        // Log activity in the background
+        activityServices.logActivity(
             userId,
-            "CREATE_GROUP",
+            ActivityType.CREATE_GROUP,
             `Created group "${group.name}"`,
             group._id.toString(),
-            { groupId: group._id },
-            session
+            { groupId: group._id }
         );
 
         await session.commitTransaction();
@@ -90,14 +90,13 @@ const joinGroup = async (userId: string, inviteCode: string) => {
         user.groupId = group._id;
         await user.save({ session });
 
-        // Log activity
-        await activityServices.createActivityLog(
+        // Log activity in the background
+        activityServices.logActivity(
             userId,
-            "JOIN_GROUP",
+            ActivityType.JOIN_GROUP,
             `Joined group "${group.name}"`,
             group._id.toString(),
-            { groupId: group._id },
-            session
+            { groupId: group._id }
         );
 
         await session.commitTransaction();
@@ -153,14 +152,13 @@ const leaveGroup = async (userId: string) => {
         user.groupId = undefined;
         await user.save({ session });
 
-        // Log activity
-        await activityServices.createActivityLog(
+        // Log activity in the background
+        activityServices.logActivity(
             userId,
-            "LEAVE_GROUP",
+            ActivityType.LEAVE_GROUP,
             `Left group "${group.name}"`,
             group._id.toString(),
-            { groupId: group._id },
-            session
+            { groupId: group._id }
         );
 
         await session.commitTransaction();

@@ -1,5 +1,5 @@
 import mongoose, { Schema } from "mongoose";
-import { Activity } from "./activity.interface";
+import { Activity, ActivityType } from "./activity.interface";
 
 const activitySchema = new Schema<Activity>(
     {
@@ -14,6 +14,7 @@ const activitySchema = new Schema<Activity>(
         },
         action: {
             type: String,
+            enum: Object.values(ActivityType),
             required: [true, "Action is required"],
         },
         details: {

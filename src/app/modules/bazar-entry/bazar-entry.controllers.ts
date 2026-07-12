@@ -6,7 +6,7 @@ import { bazarEntryServices } from "./bazar-entry.services";
 
 const createBazarEntry = catchAsync(async (req: Request, res: Response) => {
     const userId = req.user._id;
-    const result = await bazarEntryServices.createBazarEntry(userId.toString(), req.body);
+    const result = await bazarEntryServices.createBazarEntry(userId.toString(), req.user.groupId?.toString(), req.body);
 
     sendResponse(res, {
         statusCode: httpStatus.CREATED,
@@ -18,7 +18,7 @@ const createBazarEntry = catchAsync(async (req: Request, res: Response) => {
 
 const getAllBazarEntries = catchAsync(async (req: Request, res: Response) => {
     const userId = req.user._id;
-    const result = await bazarEntryServices.getAllBazarEntries(userId.toString(), req.query);
+    const result = await bazarEntryServices.getAllBazarEntries(userId.toString(), req.user.groupId?.toString(), req.query);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
@@ -32,7 +32,7 @@ const getAllBazarEntries = catchAsync(async (req: Request, res: Response) => {
 const getBazarEntryById = catchAsync(async (req: Request, res: Response) => {
     const userId = req.user._id;
     const { id } = req.params;
-    const result = await bazarEntryServices.getBazarEntryById(userId.toString(), id as string);
+    const result = await bazarEntryServices.getBazarEntryById(userId.toString(), req.user.groupId?.toString(), id as string);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
@@ -45,7 +45,7 @@ const getBazarEntryById = catchAsync(async (req: Request, res: Response) => {
 const updateBazarEntry = catchAsync(async (req: Request, res: Response) => {
     const userId = req.user._id;
     const { id } = req.params;
-    const result = await bazarEntryServices.updateBazarEntry(userId.toString(), id as string, req.body);
+    const result = await bazarEntryServices.updateBazarEntry(userId.toString(), req.user.groupId?.toString(), id as string, req.body);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
@@ -58,7 +58,7 @@ const updateBazarEntry = catchAsync(async (req: Request, res: Response) => {
 const deleteBazarEntry = catchAsync(async (req: Request, res: Response) => {
     const userId = req.user._id;
     const { id } = req.params;
-    const result = await bazarEntryServices.deleteBazarEntry(userId.toString(), id as string);
+    const result = await bazarEntryServices.deleteBazarEntry(userId.toString(), req.user.groupId?.toString(), id as string);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,

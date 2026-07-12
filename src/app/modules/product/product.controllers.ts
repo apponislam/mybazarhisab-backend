@@ -6,7 +6,7 @@ import { productServices } from "./product.services";
 
 const createProduct = catchAsync(async (req: Request, res: Response) => {
     const userId = req.user._id;
-    const result = await productServices.createProduct(userId.toString(), req.body);
+    const result = await productServices.createProduct(userId.toString(), req.user.groupId?.toString(), req.body);
 
     sendResponse(res, {
         statusCode: httpStatus.CREATED,
@@ -45,7 +45,7 @@ const getProductById = catchAsync(async (req: Request, res: Response) => {
 const updateProduct = catchAsync(async (req: Request, res: Response) => {
     const userId = req.user._id;
     const { id } = req.params;
-    const result = await productServices.updateProduct(userId.toString(), id as string, req.body);
+    const result = await productServices.updateProduct(userId.toString(), req.user.groupId?.toString(), id as string, req.body);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
@@ -58,7 +58,7 @@ const updateProduct = catchAsync(async (req: Request, res: Response) => {
 const deleteProduct = catchAsync(async (req: Request, res: Response) => {
     const userId = req.user._id;
     const { id } = req.params;
-    const result = await productServices.deleteProduct(userId.toString(), id as string);
+    const result = await productServices.deleteProduct(userId.toString(), req.user.groupId?.toString(), id as string);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,

@@ -1,26 +1,44 @@
+import mongoose from "mongoose";
 import httpStatus from "http-status";
 import ApiError from "../../../errors/ApiError";
 import { UserModel } from "../auth/auth.model";
 import { ActivityModel } from "./activity.model";
+import { ActivityType } from "./activity.interface";
 
-const createActivityLog = async (
-    userId: string,
-    action: string,
+const logActivity = (
+    userId: any,
+    action: ActivityType,
     details: string,
     groupId?: string,
-    metadata?: Record<string, any>,
-    session?: any
+    metadata?: Record<string, any>
 ) => {
-    const activityData: any = {
-        user: userId,
-        action,
-        details,
-    };
-    if (groupId) activityData.group = groupId;
-    if (metadata) activityData.metadata = metadata;
+    // Fire and forget: don't await model creation, handle errors internally
+    try {
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            console.error("Invalid userId for activity logging:", userId);
+            return;
+        }
 
-    const options = session ? { session } : {};
-    await ActivityModel.create([activityData], options);
+        const activityData: any = {
+            user: new mongoose.Types.ObjectId(userId),
+            action,
+            details,
+        };
+
+        if (groupId && mongoose.Types.ObjectId.isValid(groupId)) {
+            activityData.group = new mongoose.Types.ObjectId(groupId);
+        }
+        if (metadata) {
+            activityData.metadata = metadata;
+        }
+
+        // Create without await
+        ActivityModel.create(activityData).catch((err) => {
+            console.error("Failed to log activity in background:", err);
+        });
+    } catch (error) {
+        console.error("Failed to initiate activity logging in background:", error);
+    }
 };
 
 const getAllActivities = async (userId: string, query: any) => {
@@ -61,6 +79,6 @@ const getAllActivities = async (userId: string, query: any) => {
 };
 
 export const activityServices = {
-    createActivityLog,
+    logActivity,
     getAllActivities,
 };

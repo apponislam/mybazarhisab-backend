@@ -1,14 +1,15 @@
 import mongoose from "mongoose";
 import httpStatus from "http-status";
 import ApiError from "../../../errors/ApiError";
-import { UserModel } from "../auth/auth.model";
 import { ProductModel } from "../product/product.model";
 import { BazarEntryModel } from "./bazar-entry.model";
 import { BazarEntry, BazarUnit } from "./bazar-entry.interface";
 import { activityServices } from "../activity/activity.services";
+import { ActivityType } from "../activity/activity.interface";
 
 const createBazarEntry = async (
     userId: string,
+    groupId: string | undefined,
     payload: {
         productId?: string;
         name: string;
@@ -29,16 +30,9 @@ const createBazarEntry = async (
     session.startTransaction();
 
     try {
-        // 1. Fetch user to verify their existence and retrieve groupId if present
-        const user = await UserModel.findOne({ _id: userId, isDeleted: false }).session(session);
-        if (!user) {
-            throw new ApiError(httpStatus.NOT_FOUND, "User not found");
-        }
-        const groupId = user.groupId;
-
         let product;
 
-        // 2. Resolve target product
+        // 1. Resolve target product
         if (productId) {
             product = await ProductModel.findOne({ _id: productId, isDeleted: false }).session(session);
             if (!product) {
@@ -52,7 +46,7 @@ const createBazarEntry = async (
             }).session(session);
 
             if (!product) {
-                // 3. Create global product if not exists
+                // 2. Create global product if not exists
                 product = await ProductModel.create(
                     [
                         {
@@ -65,7 +59,7 @@ const createBazarEntry = async (
             }
         }
 
-        // 4. Create daily bazar entry under the user's group if they have one
+        // 3. Create daily bazar entry under the user's group if they have one
         const [entry] = await BazarEntryModel.create(
             [
                 {
@@ -82,14 +76,13 @@ const createBazarEntry = async (
             { session }
         );
 
-        // Log activity inside session
-        await activityServices.createActivityLog(
+        // Log activity in the background
+        activityServices.logActivity(
             userId,
-            "CREATE_BAZAR_ENTRY",
+            ActivityType.CREATE_BAZAR_ENTRY,
             `Created daily bazar entry for "${product.name}" (${quantity} ${unit || ""}) with cost of ${price * quantity}`,
-            groupId?.toString(),
-            { entryId: entry._id },
-            session
+            groupId,
+            { entryId: entry._id }
         );
 
         await session.commitTransaction();
@@ -108,14 +101,8 @@ const createBazarEntry = async (
     }
 };
 
-const getAllBazarEntries = async (userId: string, query: any) => {
+const getAllBazarEntries = async (userId: string, groupId: string | undefined, query: any) => {
     const { startDate, endDate, page = 1, limit = 10 } = query;
-
-    const user = await UserModel.findOne({ _id: userId, isDeleted: false });
-    if (!user) {
-        throw new ApiError(httpStatus.NOT_FOUND, "User not found");
-    }
-    const groupId = user.groupId;
 
     const filter: any = { isDeleted: false };
     if (groupId) {
@@ -166,13 +153,7 @@ const getAllBazarEntries = async (userId: string, query: any) => {
     };
 };
 
-const getBazarEntryById = async (userId: string, id: string) => {
-    const user = await UserModel.findOne({ _id: userId, isDeleted: false });
-    if (!user) {
-        throw new ApiError(httpStatus.NOT_FOUND, "User not found");
-    }
-    const groupId = user.groupId;
-
+const getBazarEntryById = async (userId: string, groupId: string | undefined, id: string) => {
     const filter: any = { _id: id, isDeleted: false };
     if (groupId) {
         filter.group = groupId;
@@ -192,13 +173,7 @@ const getBazarEntryById = async (userId: string, id: string) => {
     return entry;
 };
 
-const updateBazarEntry = async (userId: string, id: string, data: Partial<BazarEntry>) => {
-    const user = await UserModel.findOne({ _id: userId, isDeleted: false });
-    if (!user) {
-        throw new ApiError(httpStatus.NOT_FOUND, "User not found");
-    }
-    const groupId = user.groupId;
-
+const updateBazarEntry = async (userId: string, groupId: string | undefined, id: string, data: Partial<BazarEntry>) => {
     const filter: any = { _id: id, isDeleted: false };
     if (groupId) {
         filter.group = groupId;
@@ -219,26 +194,20 @@ const updateBazarEntry = async (userId: string, id: string, data: Partial<BazarE
         throw new ApiError(httpStatus.NOT_FOUND, "Bazar entry not found or not authorized");
     }
 
-    // Log activity
+    // Log activity in the background
     const productName = (entry.product as any)?.name || "";
-    await activityServices.createActivityLog(
+    activityServices.logActivity(
         userId,
-        "UPDATE_BAZAR_ENTRY",
+        ActivityType.UPDATE_BAZAR_ENTRY,
         `Updated daily bazar entry for "${productName}"`,
-        groupId?.toString(),
+        groupId,
         { entryId: entry._id }
     );
 
     return entry;
 };
 
-const deleteBazarEntry = async (userId: string, id: string) => {
-    const user = await UserModel.findOne({ _id: userId, isDeleted: false });
-    if (!user) {
-        throw new ApiError(httpStatus.NOT_FOUND, "User not found");
-    }
-    const groupId = user.groupId;
-
+const deleteBazarEntry = async (userId: string, groupId: string | undefined, id: string) => {
     const filter: any = { _id: id, isDeleted: false };
     if (groupId) {
         filter.group = groupId;
@@ -256,13 +225,13 @@ const deleteBazarEntry = async (userId: string, id: string) => {
         throw new ApiError(httpStatus.NOT_FOUND, "Bazar entry not found or not authorized");
     }
 
-    // Log activity
+    // Log activity in the background
     const productName = (entry.product as any)?.name || "";
-    await activityServices.createActivityLog(
+    activityServices.logActivity(
         userId,
-        "DELETE_BAZAR_ENTRY",
+        ActivityType.DELETE_BAZAR_ENTRY,
         `Deleted daily bazar entry for "${productName}"`,
-        groupId?.toString(),
+        groupId,
         { entryId: entry._id }
     );
 

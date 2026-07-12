@@ -4,22 +4,21 @@ import ApiError from "../../../errors/ApiError";
 import { BazarEntryModel } from "../bazar-entry/bazar-entry.model";
 import { Product } from "./product.interface";
 import { ProductModel } from "./product.model";
-import { UserModel } from "../auth/auth.model";
 import { activityServices } from "../activity/activity.services";
+import { ActivityType } from "../activity/activity.interface";
 
-const createProduct = async (userId: string, data: Partial<Product>) => {
+const createProduct = async (userId: string, groupId: string | undefined, data: Partial<Product>) => {
     const product = await ProductModel.create({
         ...data,
         user: userId,
     });
     
-    // Log activity
-    const user = await UserModel.findById(userId);
-    await activityServices.createActivityLog(
+    // Log activity in the background
+    activityServices.logActivity(
         userId,
-        "CREATE_PRODUCT",
+        ActivityType.CREATE_PRODUCT,
         `Created product "${product.name}"`,
-        user?.groupId?.toString(),
+        groupId,
         { productId: product._id }
     );
 
@@ -71,7 +70,7 @@ const getProductById = async (userId: string, productId: string) => {
     return product;
 };
 
-const updateProduct = async (userId: string, productId: string, data: Partial<Product>) => {
+const updateProduct = async (userId: string, groupId: string | undefined, productId: string, data: Partial<Product>) => {
     const product = await ProductModel.findOneAndUpdate(
         { _id: productId, isDeleted: false },
         { 
@@ -91,20 +90,18 @@ const updateProduct = async (userId: string, productId: string, data: Partial<Pr
     }
 
     // Log activity in the background
-    UserModel.findById(userId).then((user) => {
-        activityServices.createActivityLog(
-            userId,
-            "UPDATE_PRODUCT",
-            `Updated product "${product.name}"`,
-            user?.groupId?.toString(),
-            { productId: product._id }
-        ).catch((err) => console.error("Failed to log activity:", err));
-    }).catch((err) => console.error("Failed to find user for activity log:", err));
+    activityServices.logActivity(
+        userId,
+        ActivityType.UPDATE_PRODUCT,
+        `Updated product "${product.name}"`,
+        groupId,
+        { productId: product._id }
+    );
 
     return product;
 };
 
-const deleteProduct = async (userId: string, productId: string) => {
+const deleteProduct = async (userId: string, groupId: string | undefined, productId: string) => {
     const product = await ProductModel.findOneAndUpdate(
         { _id: productId, isDeleted: false },
         { $set: { isDeleted: true } },
@@ -118,15 +115,13 @@ const deleteProduct = async (userId: string, productId: string) => {
     }
 
     // Log activity in the background
-    UserModel.findById(userId).then((user) => {
-        activityServices.createActivityLog(
-            userId,
-            "DELETE_PRODUCT",
-            `Deleted product "${product.name}"`,
-            user?.groupId?.toString(),
-            { productId: product._id }
-        ).catch((err) => console.error("Failed to log activity:", err));
-    }).catch((err) => console.error("Failed to find user for activity log:", err));
+    activityServices.logActivity(
+        userId,
+        ActivityType.DELETE_PRODUCT,
+        `Deleted product "${product.name}"`,
+        groupId,
+        { productId: product._id }
+    );
 
     return product;
 };
@@ -166,14 +161,13 @@ const mergeProducts = async (adminId: string, sourceProductId: string, targetPro
         // 4. Delete the source product permanently
         await ProductModel.deleteOne({ _id: sourceProductId }).session(session);
 
-        // Log activity inside the transaction
-        await activityServices.createActivityLog(
+        // Log activity in the background (no session to avoid transaction block/closure crash)
+        activityServices.logActivity(
             adminId,
-            "MERGE_PRODUCTS",
+            ActivityType.MERGE_PRODUCTS,
             `Merged product "${sourceProduct.name}" into "${targetProduct.name}"`,
             undefined,
-            { sourceProductId, targetProductId },
-            session
+            { sourceProductId, targetProductId }
         );
 
         await session.commitTransaction();
