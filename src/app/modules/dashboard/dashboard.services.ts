@@ -1,9 +1,107 @@
-
+import httpStatus from "http-status";
+import ApiError from "../../../errors/ApiError";
 import { UserModel } from "../auth/auth.model";
 import { GroupModel } from "../group/group.model";
 import { ProductModel } from "../product/product.model";
 import { BazarEntryModel } from "../bazar-entry/bazar-entry.model";
 import { BillModel } from "../bill/bill.model";
+
+// Shared helpers for aggregations
+const getExpenseAggregation = async (filter: any, start: Date, end: Date): Promise<number> => {
+    const result = await BazarEntryModel.aggregate([
+        {
+            $match: {
+                ...filter,
+                date: { $gte: start, $lte: end },
+            },
+        },
+        {
+            $group: {
+                _id: null,
+                total: { $sum: { $multiply: ["$price", "$quantity"] } },
+            },
+        },
+    ]);
+    return result[0]?.total || 0;
+};
+
+const getBillExpenseAggregation = async (filter: any, start: Date, end: Date): Promise<number> => {
+    const result = await BillModel.aggregate([
+        {
+            $match: {
+                ...filter,
+                date: { $gte: start, $lte: end },
+            },
+        },
+        {
+            $group: {
+                _id: null,
+                total: { $sum: "$amount" },
+            },
+        },
+    ]);
+    return result[0]?.total || 0;
+};
+
+// Year-wise grouping aggregation helpers
+const getYearlyTrendAggregation = async (model: any, filter: any, year: number) => {
+    const startOfYear = new Date(year, 0, 1);
+    const endOfYear = new Date(year, 11, 31, 23, 59, 59, 999);
+    const isBazarModel = model.modelName === "BazarEntry";
+
+    const result = await model.aggregate([
+        {
+            $match: {
+                ...filter,
+                date: { $gte: startOfYear, $lte: endOfYear },
+            },
+        },
+        {
+            $group: {
+                _id: { $month: "$date" },
+                total: isBazarModel
+                    ? { $sum: { $multiply: ["$price", "$quantity"] } }
+                    : { $sum: "$amount" },
+            },
+        },
+    ]);
+
+    const monthMap: Record<number, number> = {};
+    result.forEach((item: any) => {
+        monthMap[item._id] = item.total;
+    });
+    return monthMap;
+};
+
+// Month-wise grouping aggregation helpers
+const getMonthlyTrendAggregation = async (model: any, filter: any, year: number, month: number) => {
+    const startOfMonth = new Date(year, month, 1);
+    const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59, 999);
+    const isBazarModel = model.modelName === "BazarEntry";
+
+    const result = await model.aggregate([
+        {
+            $match: {
+                ...filter,
+                date: { $gte: startOfMonth, $lte: endOfMonth },
+            },
+        },
+        {
+            $group: {
+                _id: { $dayOfMonth: "$date" },
+                total: isBazarModel
+                    ? { $sum: { $multiply: ["$price", "$quantity"] } }
+                    : { $sum: "$amount" },
+            },
+        },
+    ]);
+
+    const dayMap: Record<number, number> = {};
+    result.forEach((item: any) => {
+        dayMap[item._id] = item.total;
+    });
+    return dayMap;
+};
 
 const getAdminDashboardStats = async () => {
     const totalUsers = await UserModel.countDocuments({ isDeleted: false });
@@ -98,42 +196,6 @@ const getUserDashboardStats = async (userId: string, groupId: string | undefined
     const startOfPrevYear = new Date(now.getFullYear() - 1, 0, 1);
     const endOfPrevYear = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999);
 
-    const getExpenseForRange = async (start: Date, end: Date): Promise<number> => {
-        const result = await BazarEntryModel.aggregate([
-            {
-                $match: {
-                    ...groupEntriesFilter,
-                    date: { $gte: start, $lte: end },
-                },
-            },
-            {
-                $group: {
-                    _id: null,
-                    total: { $sum: { $multiply: ["$price", "$quantity"] } },
-                },
-            },
-        ]);
-        return result[0]?.total || 0;
-    };
-
-    const getBillExpenseForRange = async (start: Date, end: Date): Promise<number> => {
-        const result = await BillModel.aggregate([
-            {
-                $match: {
-                    ...groupEntriesFilter,
-                    date: { $gte: start, $lte: end },
-                },
-            },
-            {
-                $group: {
-                    _id: null,
-                    total: { $sum: "$amount" },
-                },
-            },
-        ]);
-        return result[0]?.total || 0;
-    };
-
     const [
         thisMonthBazarExpense,
         prevMonthBazarExpense,
@@ -144,14 +206,14 @@ const getUserDashboardStats = async (userId: string, groupId: string | undefined
         thisYearBillExpense,
         prevYearBillExpense,
     ] = await Promise.all([
-        getExpenseForRange(startOfThisMonth, endOfThisMonth),
-        getExpenseForRange(startOfPrevMonth, endOfPrevMonth),
-        getExpenseForRange(startOfThisYear, endOfThisYear),
-        getExpenseForRange(startOfPrevYear, endOfPrevYear),
-        getBillExpenseForRange(startOfThisMonth, endOfThisMonth),
-        getBillExpenseForRange(startOfPrevMonth, endOfPrevMonth),
-        getBillExpenseForRange(startOfThisYear, endOfThisYear),
-        getBillExpenseForRange(startOfPrevYear, endOfPrevYear),
+        getExpenseAggregation(groupEntriesFilter, startOfThisMonth, endOfThisMonth),
+        getExpenseAggregation(groupEntriesFilter, startOfPrevMonth, endOfPrevMonth),
+        getExpenseAggregation(groupEntriesFilter, startOfThisYear, endOfThisYear),
+        getExpenseAggregation(groupEntriesFilter, startOfPrevYear, endOfPrevYear),
+        getBillExpenseAggregation(groupEntriesFilter, startOfThisMonth, endOfThisMonth),
+        getBillExpenseAggregation(groupEntriesFilter, startOfPrevMonth, endOfPrevMonth),
+        getBillExpenseAggregation(groupEntriesFilter, startOfThisYear, endOfThisYear),
+        getBillExpenseAggregation(groupEntriesFilter, startOfPrevYear, endOfPrevYear),
     ]);
 
     const thisMonthTotalExpense = thisMonthBazarExpense + thisMonthBillExpense;
@@ -179,7 +241,66 @@ const getUserDashboardStats = async (userId: string, groupId: string | undefined
     };
 };
 
+const getMonthlyExpenseTrend = async (userId: string, groupId: string | undefined, view: string = "yearly") => {
+    const groupEntriesFilter: any = { isDeleted: false };
+    if (groupId) {
+        groupEntriesFilter.group = groupId;
+    } else {
+        groupEntriesFilter.user = userId;
+    }
+
+    const now = new Date();
+
+    if (view === "monthly") {
+        // Daily trend 1-28/29/30/31 of the current month
+        const year = now.getFullYear();
+        const month = now.getMonth();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        const [bazarMap, billMap] = await Promise.all([
+            getMonthlyTrendAggregation(BazarEntryModel, groupEntriesFilter, year, month),
+            getMonthlyTrendAggregation(BillModel, groupEntriesFilter, year, month),
+        ]);
+
+        const trend = [];
+        for (let day = 1; day <= daysInMonth; day++) {
+            const bazarExpense = bazarMap[day] || 0;
+            const billExpense = billMap[day] || 0;
+            trend.push({
+                label: `Day ${day}`,
+                bazarExpense,
+                billExpense,
+                totalExpense: bazarExpense + billExpense,
+            });
+        }
+        return trend;
+    } else {
+        // Yearly trend: Month-wise 12 months (default)
+        const year = now.getFullYear();
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+        const [bazarMap, billMap] = await Promise.all([
+            getYearlyTrendAggregation(BazarEntryModel, groupEntriesFilter, year),
+            getYearlyTrendAggregation(BillModel, groupEntriesFilter, year),
+        ]);
+
+        const trend = monthNames.map((name, index) => {
+            const monthNum = index + 1; // 1-12
+            const bazarExpense = bazarMap[monthNum] || 0;
+            const billExpense = billMap[monthNum] || 0;
+            return {
+                label: name,
+                bazarExpense,
+                billExpense,
+                totalExpense: bazarExpense + billExpense,
+            };
+        });
+        return trend;
+    }
+};
+
 export const dashboardServices = {
     getAdminDashboardStats,
     getUserDashboardStats,
+    getMonthlyExpenseTrend,
 };

@@ -101,7 +101,11 @@ const createBazarEntry = async (
     }
 };
 
-const getAllBazarEntries = async (userId: string, groupId: string | undefined, query: any) => {
+const getAllBazarEntries = async (
+    userId: string,
+    groupId: string | undefined,
+    query: { startDate?: string; endDate?: string; page?: string; limit?: string }
+) => {
     const { startDate, endDate, page = 1, limit = 10 } = query;
 
     const filter: any = { isDeleted: false };

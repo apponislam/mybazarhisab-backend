@@ -27,7 +27,11 @@ const createBill = async (userId: string, groupId: string | undefined, data: Par
         .populate("group", "name creator");
 };
 
-const getAllBills = async (userId: string, groupId: string | undefined, query: any) => {
+const getAllBills = async (
+    userId: string,
+    groupId: string | undefined,
+    query: { category?: string; startDate?: string; endDate?: string; page?: string; limit?: string }
+) => {
     const { category, startDate, endDate, page = 1, limit = 10 } = query;
 
     const filter: any = { isDeleted: false };

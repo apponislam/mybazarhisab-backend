@@ -40,7 +40,11 @@ const logActivity = (
     }
 };
 
-const getAllActivities = async (userId: string, groupId: string | undefined, query: any) => {
+const getAllActivities = async (
+    userId: string,
+    groupId: string | undefined,
+    query: { page?: string; limit?: string }
+) => {
     const { page = 1, limit = 20 } = query;
 
     const filter: any = { isDeleted: false };

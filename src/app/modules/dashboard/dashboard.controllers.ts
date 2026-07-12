@@ -27,7 +27,21 @@ const getUserDashboardStats = catchAsync(async (req: Request, res: Response) => 
     });
 });
 
+const getMonthlyExpenseTrend = catchAsync(async (req: Request, res: Response) => {
+    const userId = req.user._id;
+    const view = req.query.view as string | undefined;
+    const result = await dashboardServices.getMonthlyExpenseTrend(userId.toString(), req.user.groupId?.toString(), view);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Monthly expense trend retrieved successfully",
+        data: result,
+    });
+});
+
 export const dashboardControllers = {
     getAdminDashboardStats,
     getUserDashboardStats,
+    getMonthlyExpenseTrend,
 };

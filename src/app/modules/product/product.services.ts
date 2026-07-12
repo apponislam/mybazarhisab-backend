@@ -25,7 +25,10 @@ const createProduct = async (userId: string, groupId: string | undefined, data: 
     return await ProductModel.findById(product._id).populate("user", "name email phone profileImage");
 };
 
-const getAllProducts = async (userId: string, query: any) => {
+const getAllProducts = async (
+    userId: string,
+    query: { searchTerm?: string; page?: string; limit?: string }
+) => {
     const { searchTerm, page = 1, limit = 10 } = query;
 
     const filter: any = { isDeleted: false };
