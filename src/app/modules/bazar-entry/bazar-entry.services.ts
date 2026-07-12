@@ -3,15 +3,16 @@ import httpStatus from "http-status";
 import ApiError from "../../../errors/ApiError";
 import { ProductModel } from "../product/product.model";
 import { BazarEntryModel } from "./bazar-entry.model";
-import { BazarEntry } from "./bazar-entry.interface";
+import { BazarEntry, BazarUnit } from "./bazar-entry.interface";
 
 const createBazarEntry = async (
     userId: string,
     payload: {
+        productId?: string;
         name: string;
         price: number;
         quantity?: number;
-        unit?: string;
+        unit?: BazarUnit;
         notes?: string;
         date?: Date;
     }
@@ -20,22 +21,35 @@ const createBazarEntry = async (
     session.startTransaction();
 
     try {
-        const { name, price, quantity = 1, unit, notes, date = new Date() } = payload;
+        const { productId, name, price, quantity = 1, unit, notes, date = new Date() } = payload;
 
         if (!name || !name.trim()) {
             throw new ApiError(httpStatus.BAD_REQUEST, "Product name is required");
         }
 
-        // 1. Search for existing product with same name for this user (case-insensitive)
-        let product = await ProductModel.findOne({
-            name: { $regex: new RegExp("^" + name.trim() + "$", "i") },
-            user: userId,
-            isDeleted: false,
-        }).session(session);
+        let product = null;
 
-        // 2. If product does not exist, create a new one
+        // 1. If productId is provided from frontend dropdown, verify it exists
+        if (productId && mongoose.Types.ObjectId.isValid(productId)) {
+            product = await ProductModel.findOne({
+                _id: productId,
+                user: userId,
+                isDeleted: false,
+            }).session(session);
+        }
+
+        // 2. If no product was found by id, fallback to lookup by name (case-insensitive) to prevent duplicates
         if (!product) {
-            const [newProduct] = await ProductModel.create(
+            product = await ProductModel.findOne({
+                name: { $regex: new RegExp("^" + name.trim() + "$", "i") },
+                user: userId,
+                isDeleted: false,
+            }).session(session);
+        }
+
+        // 3. If product does not exist, create a new one
+        if (!product) {
+            const newProducts = await ProductModel.create(
                 [
                     {
                         name: name.trim(),
@@ -44,11 +58,11 @@ const createBazarEntry = async (
                 ],
                 { session }
             );
-            product = newProduct;
+            product = newProducts[0];
         }
 
         // 3. Create daily bazar entry
-        const [entry] = await BazarEntryModel.create(
+        const entries = await BazarEntryModel.create(
             [
                 {
                     product: product._id,
@@ -62,6 +76,7 @@ const createBazarEntry = async (
             ],
             { session }
         );
+        const entry = entries[0];
 
         await session.commitTransaction();
         session.endSession();
