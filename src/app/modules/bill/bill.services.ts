@@ -79,8 +79,10 @@ const getAllBills = async (
             page: Number(page),
             limit: Number(limit),
             total,
-            totalPage: Math.ceil(total / Number(limit)),
+            totalPages: Math.ceil(total / Number(limit)),
             totalAmount,
+            hasNext: Number(page) * Number(limit) < total,
+            hasPrev: Number(page) > 1,
         },
         data: bills,
     };
