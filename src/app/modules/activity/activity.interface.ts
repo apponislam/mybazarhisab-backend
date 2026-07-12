@@ -19,6 +19,9 @@ export enum ActivityType {
     CREATE_GROUP = "CREATE_GROUP",
     JOIN_GROUP = "JOIN_GROUP",
     LEAVE_GROUP = "LEAVE_GROUP",
+    CREATE_BILL = "CREATE_BILL",
+    UPDATE_BILL = "UPDATE_BILL",
+    DELETE_BILL = "DELETE_BILL",
 }
 
 export interface Activity {

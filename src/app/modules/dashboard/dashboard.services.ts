@@ -1,15 +1,16 @@
-import httpStatus from "http-status";
-import ApiError from "../../../errors/ApiError";
+
 import { UserModel } from "../auth/auth.model";
 import { GroupModel } from "../group/group.model";
 import { ProductModel } from "../product/product.model";
 import { BazarEntryModel } from "../bazar-entry/bazar-entry.model";
+import { BillModel } from "../bill/bill.model";
 
 const getAdminDashboardStats = async () => {
     const totalUsers = await UserModel.countDocuments({ isDeleted: false });
     const totalGroups = await GroupModel.countDocuments({ isDeleted: false });
     const totalProducts = await ProductModel.countDocuments({ isDeleted: false });
     const totalBazarEntries = await BazarEntryModel.countDocuments({ isDeleted: false });
+    const totalBills = await BillModel.countDocuments({ isDeleted: false });
 
     // Calculate average bazar entry cost (average of price * quantity)
     const averageBazarAggregation = await BazarEntryModel.aggregate([
@@ -24,12 +25,30 @@ const getAdminDashboardStats = async () => {
 
     const averageBazarEntry = averageBazarAggregation[0]?.avgCost || 0;
 
+    // Calculate global bill metrics
+    const billAggregation = await BillModel.aggregate([
+        { $match: { isDeleted: false } },
+        {
+            $group: {
+                _id: null,
+                totalAmount: { $sum: "$amount" },
+                avgAmount: { $avg: "$amount" },
+            },
+        },
+    ]);
+
+    const totalBillAmount = billAggregation[0]?.totalAmount || 0;
+    const averageBillAmount = billAggregation[0]?.avgAmount || 0;
+
     return {
         totalUsers,
         totalGroups,
         totalProducts,
         totalBazarEntries,
+        totalBills,
         averageBazarEntry: parseFloat(averageBazarEntry.toFixed(2)),
+        totalBillAmount: parseFloat(totalBillAmount.toFixed(2)),
+        averageBillAmount: parseFloat(averageBillAmount.toFixed(2)),
     };
 };
 
@@ -97,22 +116,66 @@ const getUserDashboardStats = async (userId: string, groupId: string | undefined
         return result[0]?.total || 0;
     };
 
-    const [thisMonthExpense, prevMonthExpense, thisYearExpense, prevYearExpense] = await Promise.all([
+    const getBillExpenseForRange = async (start: Date, end: Date): Promise<number> => {
+        const result = await BillModel.aggregate([
+            {
+                $match: {
+                    ...groupEntriesFilter,
+                    date: { $gte: start, $lte: end },
+                },
+            },
+            {
+                $group: {
+                    _id: null,
+                    total: { $sum: "$amount" },
+                },
+            },
+        ]);
+        return result[0]?.total || 0;
+    };
+
+    const [
+        thisMonthBazarExpense,
+        prevMonthBazarExpense,
+        thisYearBazarExpense,
+        prevYearBazarExpense,
+        thisMonthBillExpense,
+        prevMonthBillExpense,
+        thisYearBillExpense,
+        prevYearBillExpense,
+    ] = await Promise.all([
         getExpenseForRange(startOfThisMonth, endOfThisMonth),
         getExpenseForRange(startOfPrevMonth, endOfPrevMonth),
         getExpenseForRange(startOfThisYear, endOfThisYear),
         getExpenseForRange(startOfPrevYear, endOfPrevYear),
+        getBillExpenseForRange(startOfThisMonth, endOfThisMonth),
+        getBillExpenseForRange(startOfPrevMonth, endOfPrevMonth),
+        getBillExpenseForRange(startOfThisYear, endOfThisYear),
+        getBillExpenseForRange(startOfPrevYear, endOfPrevYear),
     ]);
+
+    const thisMonthTotalExpense = thisMonthBazarExpense + thisMonthBillExpense;
+    const prevMonthTotalExpense = prevMonthBazarExpense + prevMonthBillExpense;
+    const thisYearTotalExpense = thisYearBazarExpense + thisYearBillExpense;
+    const prevYearTotalExpense = prevYearBazarExpense + prevYearBillExpense;
 
     return {
         totalMembers,
         totalGroupBazarEntries,
         totalMyBazarEntries,
         totalProductsCreatedByMe,
-        thisMonthExpense,
-        prevMonthExpense,
-        thisYearExpense,
-        prevYearExpense,
+        thisMonthBazarExpense,
+        prevMonthBazarExpense,
+        thisYearBazarExpense,
+        prevYearBazarExpense,
+        thisMonthBillExpense,
+        prevMonthBillExpense,
+        thisYearBillExpense,
+        prevYearBillExpense,
+        thisMonthTotalExpense,
+        prevMonthTotalExpense,
+        thisYearTotalExpense,
+        prevYearTotalExpense,
     };
 };
 

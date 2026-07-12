@@ -5,6 +5,7 @@ import { bazarEntryRoutes } from "../modules/bazar-entry/bazar-entry.routes";
 import { groupRoutes } from "../modules/group/group.routes";
 import { dashboardRoutes } from "../modules/dashboard/dashboard.routes";
 import { activityRoutes } from "../modules/activity/activity.routes";
+import { billRoutes } from "../modules/bill/bill.routes";
 
 const router = express.Router();
 
@@ -32,6 +33,10 @@ const moduleRoutes = [
     {
         path: "/activities",
         route: activityRoutes,
+    },
+    {
+        path: "/bills",
+        route: billRoutes,
     },
 ];
 
