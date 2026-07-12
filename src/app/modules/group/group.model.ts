@@ -37,7 +37,6 @@ const groupSchema = new Schema<Group>(
 );
 
 // Indexes
-groupSchema.index({ inviteCode: 1 }, { unique: true });
 groupSchema.index({ members: 1, isDeleted: 1 });
 groupSchema.index({ creator: 1, isDeleted: 1 });
 
