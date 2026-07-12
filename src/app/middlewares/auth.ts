@@ -24,7 +24,7 @@ const auth = catchAsync(async (req: Request, res: Response, next: NextFunction) 
         throw new ApiError(401, "Authentication failed: Invalid token");
     }
 
-    const user = await UserModel.findOne({ _id: decoded._id });
+    const user = await UserModel.findOne({ _id: decoded._id, isDeleted: false });
 
     if (!user) {
         throw new ApiError(404, "Authentication failed: User not found");

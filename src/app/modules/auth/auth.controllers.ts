@@ -261,6 +261,31 @@ const setUserPassword = catchAsync(async (req: Request, res: Response) => {
 
 
 
+const deleteAccount = catchAsync(async (req: Request, res: Response) => {
+    const userId = req.user._id;
+    await authServices.deleteUser(userId.toString());
+    res.clearCookie("refreshToken");
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Account deleted successfully",
+        data: null,
+    });
+});
+
+const deleteUserByAdmin = catchAsync(async (req: Request, res: Response) => {
+    const { userId } = req.params;
+    await authServices.deleteUser(userId as string);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "User deleted successfully",
+        data: null,
+    });
+});
+
 export const authControllers = {
     register,
 
@@ -281,5 +306,6 @@ export const authControllers = {
     resendEmailUpdate,
     verifyNewEmail,
     setUserPassword,
-
+    deleteAccount,
+    deleteUserByAdmin,
 };
