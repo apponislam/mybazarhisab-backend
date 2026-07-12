@@ -5,6 +5,7 @@ import config from "../../config";
 import { UserModel } from "./auth.model";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
+import { activityServices } from "../activity/activity.services";
 import { sendOtpEmail, sendVerificationEmail, sendWelcomeEmail, sendEmailUpdateVerification } from "../../../utils/emailTemplates";
 import mongoose from "mongoose";
 
@@ -52,6 +53,15 @@ const registerUser = async (data: any) => {
     const userObject = createdUser.toObject();
     const { password: pwd, verificationToken: vToken, verificationExpiry: vExpiry, verificationCode: vCode, ...userWithoutSensitive } = userObject;
 
+    // Log activity in the background
+    activityServices.createActivityLog(
+        createdUser._id.toString(),
+        "USER_REGISTER",
+        `Registered a new account with email ${createdUser.email}`,
+        undefined,
+        { userId: createdUser._id }
+    ).catch((err) => console.error("Failed to log activity:", err));
+
     return { user: userWithoutSensitive, accessToken, refreshToken };
 };
 
@@ -88,6 +98,15 @@ const loginUser = async (data: { email: string; password: string }) => {
 
     const { password, ...userWithoutPassword } = user.toObject();
 
+    // Log activity in the background
+    activityServices.createActivityLog(
+        user._id.toString(),
+        "USER_LOGIN",
+        `Logged into the application`,
+        user.groupId?.toString(),
+        { userId: user._id }
+    ).catch((err) => console.error("Failed to log activity:", err));
+
     return { user: userWithoutPassword, accessToken, refreshToken };
 };
 
@@ -120,6 +139,15 @@ const verifyEmail = async (email: string, token?: string, otp?: string) => {
     user.verificationCode = undefined;
     user.verificationExpiry = undefined;
     await user.save();
+
+    // Log activity in the background
+    activityServices.createActivityLog(
+        user._id.toString(),
+        "USER_EMAIL_VERIFIED",
+        `Verified email address successfully`,
+        user.groupId?.toString(),
+        { userId: user._id }
+    ).catch((err) => console.error("Failed to log activity:", err));
 
     return { message: "Email verified successfully" };
 };
@@ -262,12 +290,31 @@ const resetPassword = async (token: string, newPassword: string) => {
     user.resetPasswordTokenExpiry = undefined;
 
     await user.save();
+
+    // Log activity in the background
+    activityServices.createActivityLog(
+        user._id.toString(),
+        "USER_RESET_PASSWORD",
+        `Reset password using password recovery link`,
+        user.groupId?.toString(),
+        { userId: user._id }
+    ).catch((err) => console.error("Failed to log activity:", err));
 };
 
 const updateProfile = async (userId: string, data: any) => {
     const user = await UserModel.findOneAndUpdate({ _id: userId, isDeleted: false }, { $set: data }, { returnDocument: "after", runValidators: true }).select("-password");
 
     if (!user) throw new ApiError(httpStatus.NOT_FOUND, "User not registered");
+
+    // Log activity in the background
+    activityServices.createActivityLog(
+        userId,
+        "USER_UPDATE_PROFILE",
+        `Updated profile information`,
+        user.groupId?.toString(),
+        { userId: user._id }
+    ).catch((err) => console.error("Failed to log activity:", err));
+
     return user;
 };
 
@@ -281,6 +328,15 @@ const changePassword = async (userId: string, currentPassword: string, newPasswo
     const hashedPassword = await bcrypt.hash(newPassword, Number(config.bcrypt_salt_rounds));
     user.password = hashedPassword;
     await user.save();
+
+    // Log activity in the background
+    activityServices.createActivityLog(
+        userId,
+        "USER_CHANGE_PASSWORD",
+        `Changed profile password`,
+        user.groupId?.toString(),
+        { userId: user._id }
+    ).catch((err) => console.error("Failed to log activity:", err));
 };
 
 const updateEmail = async (userId: string, newEmail: string, password: string) => {
@@ -351,6 +407,15 @@ const verifyNewEmail = async (token: string, email: string) => {
 
     await user.save();
 
+    // Log activity in the background
+    activityServices.createActivityLog(
+        user._id.toString(),
+        "USER_UPDATE_EMAIL",
+        `Updated account email to ${email}`,
+        user.groupId?.toString(),
+        { userId: user._id }
+    ).catch((err) => console.error("Failed to log activity:", err));
+
     return { message: "New email verified successfully" };
 };
 
@@ -368,6 +433,16 @@ const setUserPassword = async (userId: string, newPassword: string) => {
 const deleteUser = async (userId: string) => {
     const user = await UserModel.findByIdAndUpdate(userId, { $set: { isDeleted: true } }, { new: true });
     if (!user) throw new ApiError(httpStatus.NOT_FOUND, "User not found");
+
+    // Log activity in the background
+    activityServices.createActivityLog(
+        userId,
+        "USER_DELETE",
+        `Deleted user account (soft delete)`,
+        user.groupId?.toString(),
+        { userId: user._id }
+    ).catch((err) => console.error("Failed to log activity:", err));
+
     return user;
 };
 

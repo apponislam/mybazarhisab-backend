@@ -90,15 +90,16 @@ const updateProduct = async (userId: string, productId: string, data: Partial<Pr
         throw new ApiError(httpStatus.NOT_FOUND, "Product not found or not authorized");
     }
 
-    // Log activity
-    const user = await UserModel.findById(userId);
-    await activityServices.createActivityLog(
-        userId,
-        "UPDATE_PRODUCT",
-        `Updated product "${product.name}"`,
-        user?.groupId?.toString(),
-        { productId: product._id }
-    );
+    // Log activity in the background
+    UserModel.findById(userId).then((user) => {
+        activityServices.createActivityLog(
+            userId,
+            "UPDATE_PRODUCT",
+            `Updated product "${product.name}"`,
+            user?.groupId?.toString(),
+            { productId: product._id }
+        ).catch((err) => console.error("Failed to log activity:", err));
+    }).catch((err) => console.error("Failed to find user for activity log:", err));
 
     return product;
 };
@@ -116,15 +117,16 @@ const deleteProduct = async (userId: string, productId: string) => {
         throw new ApiError(httpStatus.NOT_FOUND, "Product not found or not authorized");
     }
 
-    // Log activity
-    const user = await UserModel.findById(userId);
-    await activityServices.createActivityLog(
-        userId,
-        "DELETE_PRODUCT",
-        `Deleted product "${product.name}"`,
-        user?.groupId?.toString(),
-        { productId: product._id }
-    );
+    // Log activity in the background
+    UserModel.findById(userId).then((user) => {
+        activityServices.createActivityLog(
+            userId,
+            "DELETE_PRODUCT",
+            `Deleted product "${product.name}"`,
+            user?.groupId?.toString(),
+            { productId: product._id }
+        ).catch((err) => console.error("Failed to log activity:", err));
+    }).catch((err) => console.error("Failed to find user for activity log:", err));
 
     return product;
 };
