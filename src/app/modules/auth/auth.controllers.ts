@@ -17,8 +17,6 @@ const register = catchAsync(async (req: Request, res: Response) => {
         password: data.password,
         role: data.role,
         phone: data.phone,
-        referredByCode: data.referredByCode || data.referralCode,
-        referredBy: data.referredBy,
     };
 
     // Basic validation

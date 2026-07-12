@@ -13,28 +13,6 @@ const registerUser = async (data: any) => {
     const existing = await UserModel.findOne({ email: data.email });
     if (existing) throw new ApiError(httpStatus.BAD_REQUEST, "Email already registered. Please sign in.");
 
-    // Remove balance if sent in payload to prevent manual setting
-    if (data.balance !== undefined) {
-        delete data.balance;
-    }
-
-    // Resolve referral/referredBy if provided
-    let referredBy = null;
-    const referralCodeInput = data.referredByCode || data.referralCode;
-    if (data.referredBy && mongoose.Types.ObjectId.isValid(data.referredBy)) {
-        referredBy = data.referredBy;
-    } else if (referralCodeInput) {
-        const referrer = await UserModel.findOne({ referralCode: referralCodeInput });
-        if (referrer) {
-            referredBy = referrer._id;
-        }
-    }
-
-    // Remove these fields so they don't interfere with the new user's database document fields
-    delete data.referralCode;
-    delete data.referredByCode;
-    delete data.referredBy;
-
     // Hash password
     const hashedPassword = await bcrypt.hash(data.password, Number(config.bcrypt_salt_rounds));
 
@@ -43,16 +21,12 @@ const registerUser = async (data: any) => {
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
     const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-
-
     // Create user
     const userData = {
         ...data,
         password: hashedPassword,
         isActive: true,
         isEmailVerified: false,
-        balance: 0,
-        referredBy,
         verificationToken,
         verificationCode,
         verificationExpiry,
@@ -83,7 +57,7 @@ const registerUser = async (data: any) => {
 
 const loginUser = async (data: { email: string; password: string }) => {
     // Find user
-    const user = await UserModel.findOne({ email: data.email }).populate("subscriptionPlanId");
+    const user = await UserModel.findOne({ email: data.email });
     if (!user) throw new ApiError(httpStatus.UNAUTHORIZED, "Incorrect email or password");
 
     // Check password
@@ -177,7 +151,7 @@ const resendVerificationEmail = async (email: string) => {
 };
 
 const getUserById = async (userId: string) => {
-    const user = await UserModel.findById(userId).select("-password").populate("subscriptionPlanId");
+    const user = await UserModel.findById(userId).select("-password");
     if (!user) throw new ApiError(httpStatus.NOT_FOUND, "User not registered");
     return user;
 };
@@ -188,7 +162,7 @@ const refreshAccessToken = async (refreshToken: string) => {
     try {
         const decoded = jwtHelper.verifyToken(refreshToken, config.jwt_refresh_secret as string);
 
-        const user = await UserModel.findById(decoded._id).select("-password").populate("subscriptionPlanId");
+        const user = await UserModel.findById(decoded._id).select("-password");
         if (!user) throw new ApiError(httpStatus.UNAUTHORIZED, "User not registered");
 
         const jwtPayload = {
@@ -291,12 +265,7 @@ const resetPassword = async (token: string, newPassword: string) => {
 };
 
 const updateProfile = async (userId: string, data: any) => {
-    // Prevent manual balance update
-    if (data.balance !== undefined) {
-        delete data.balance;
-    }
-
-    const user = await UserModel.findByIdAndUpdate(userId, { $set: data }, { returnDocument: "after", runValidators: true }).select("-password").populate("subscriptionPlanId");
+    const user = await UserModel.findByIdAndUpdate(userId, { $set: data }, { returnDocument: "after", runValidators: true }).select("-password");
 
     if (!user) throw new ApiError(httpStatus.NOT_FOUND, "User not registered");
     return user;
