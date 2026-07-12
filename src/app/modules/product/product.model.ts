@@ -26,6 +26,14 @@ const productSchema = new Schema<Product>(
             ref: "User",
             required: [true, "User ID is required"],
         },
+        isEdited: {
+            type: Boolean,
+            default: false,
+        },
+        updatedBy: {
+            type: Schema.Types.ObjectId,
+            ref: "User",
+        },
         isActive: {
             type: Boolean,
             default: true,

@@ -84,8 +84,11 @@ const createBazarEntry = async (
         await session.commitTransaction();
         session.endSession();
 
-        // Populate product details
-        const populatedEntry = await BazarEntryModel.findById(entry._id).populate("product");
+        // Populate product, creator user (with phone), and group details
+        const populatedEntry = await BazarEntryModel.findById(entry._id)
+            .populate("product")
+            .populate("user", "name email phone profileImage")
+            .populate("group", "name creator");
         return populatedEntry;
     } catch (error) {
         await session.abortTransaction();
@@ -119,6 +122,8 @@ const getAllBazarEntries = async (userId: string, query: any) => {
     const skip = (Number(page) - 1) * Number(limit);
     const entries = await BazarEntryModel.find(filter)
         .populate("product")
+        .populate("user", "name email phone profileImage")
+        .populate("group", "name creator")
         .sort({ date: -1, createdAt: -1 })
         .skip(skip)
         .limit(Number(limit));
@@ -164,7 +169,10 @@ const getBazarEntryById = async (userId: string, id: string) => {
         filter.user = userId;
     }
 
-    const entry = await BazarEntryModel.findOne(filter).populate("product");
+    const entry = await BazarEntryModel.findOne(filter)
+        .populate("product")
+        .populate("user", "name email phone profileImage")
+        .populate("group", "name creator");
 
     if (!entry) {
         throw new ApiError(httpStatus.NOT_FOUND, "Bazar entry not found");
@@ -191,7 +199,10 @@ const updateBazarEntry = async (userId: string, id: string, data: Partial<BazarE
         filter,
         { $set: data },
         { new: true, runValidators: true }
-    ).populate("product");
+    )
+        .populate("product")
+        .populate("user", "name email phone profileImage")
+        .populate("group", "name creator");
 
     if (!entry) {
         throw new ApiError(httpStatus.NOT_FOUND, "Bazar entry not found or not authorized");

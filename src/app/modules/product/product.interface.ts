@@ -6,6 +6,8 @@ export interface Product {
     is18Plus?: boolean;
     description?: string;
     user: Types.ObjectId;
+    isEdited?: boolean;
+    updatedBy?: Types.ObjectId;
     isActive: boolean;
     isDeleted: boolean;
     createdAt: Date;
