@@ -3,11 +3,6 @@ import httpStatus from "http-status";
 import ApiError from "../../../errors/ApiError";
 import { UserModel } from "../auth/auth.model";
 import { GroupModel } from "./group.model";
-import crypto from "crypto";
-
-const generateInviteCode = (): string => {
-    return "BAZAR-" + crypto.randomBytes(3).toString("hex").toUpperCase();
-};
 
 const createGroup = async (userId: string, name: string) => {
     const session = await mongoose.startSession();
@@ -24,28 +19,19 @@ const createGroup = async (userId: string, name: string) => {
             throw new ApiError(httpStatus.BAD_REQUEST, "You are already a member of a group. Leave it first.");
         }
 
-        // 2. Generate unique invite code
-        let inviteCode = generateInviteCode();
-        let codeExists = await GroupModel.findOne({ inviteCode }).session(session);
-        while (codeExists) {
-            inviteCode = generateInviteCode();
-            codeExists = await GroupModel.findOne({ inviteCode }).session(session);
-        }
-
-        // 3. Create Group
+        // 2. Create Group (inviteCode generated automatically by pre-save hook)
         const [group] = await GroupModel.create(
             [
                 {
                     name: name.trim(),
                     creator: userId,
                     members: [userId],
-                    inviteCode,
                 },
             ],
             { session }
         );
 
-        // 4. Link user to group
+        // 3. Link user to group
         user.groupId = group._id;
         await user.save({ session });
 

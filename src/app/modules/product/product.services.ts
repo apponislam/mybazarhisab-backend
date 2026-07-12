@@ -17,7 +17,10 @@ const getAllProducts = async (userId: string, query: any) => {
     const filter: any = { isDeleted: false };
 
     if (searchTerm) {
-        filter.name = { $regex: searchTerm, $options: "i" };
+        filter.$or = [
+            { name: { $regex: searchTerm, $options: "i" } },
+            { description: { $regex: searchTerm, $options: "i" } },
+        ];
     }
 
     const skip = (Number(page) - 1) * Number(limit);

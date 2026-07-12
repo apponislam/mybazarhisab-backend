@@ -111,19 +111,21 @@ const UserSchema = new Schema<User>(userSchemaDefinition, {
     },
 });
 
-// Authentication lookup
+// Authentication lookup (optimized for isDeleted filtering)
 UserSchema.index({ email: 1 }, { unique: true });
-UserSchema.index({ name: 1 });
+UserSchema.index({ email: 1, isDeleted: 1 });
+UserSchema.index({ name: 1, isDeleted: 1 });
+UserSchema.index({ role: 1, isDeleted: 1 });
+UserSchema.index({ isActive: 1, isDeleted: 1 });
+UserSchema.index({ isEmailVerified: 1, isDeleted: 1 });
+UserSchema.index({ groupId: 1, isDeleted: 1 });
 
-UserSchema.index({ role: 1 });
-UserSchema.index({ isActive: 1 });
-
-UserSchema.index({ isEmailVerified: 1 });
-
-// Token lookup indexes (important for auth flows)
-UserSchema.index({ resetPasswordToken: 1 });
-UserSchema.index({ verificationToken: 1 });
-UserSchema.index({ emailVerificationToken: 1 });
+// Token & OTP lookup indexes (important for auth flows)
+UserSchema.index({ resetPasswordToken: 1, isDeleted: 1 });
+UserSchema.index({ resetPasswordOtp: 1, isDeleted: 1 });
+UserSchema.index({ verificationToken: 1, isDeleted: 1 });
+UserSchema.index({ verificationCode: 1, isDeleted: 1 });
+UserSchema.index({ emailVerificationToken: 1, isDeleted: 1 });
 
 // Activity tracking optimization
 UserSchema.index({ lastLogin: -1 });

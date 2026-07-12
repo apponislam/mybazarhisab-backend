@@ -42,8 +42,10 @@ const productSchema = new Schema<Product>(
 );
 
 // Indexes for faster lookups
+productSchema.index({ name: "text", description: "text" });
+productSchema.index({ name: 1, isDeleted: 1 });
+productSchema.index({ isDeleted: 1, createdAt: -1 });
 productSchema.index({ user: 1, isDeleted: 1 });
-productSchema.index({ name: 1 });
 
 
 export const ProductModel = mongoose.model<Product>("Product", productSchema);

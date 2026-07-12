@@ -54,8 +54,8 @@ const bazarEntrySchema = new Schema<BazarEntry>(
 );
 
 // Indexes
-bazarEntrySchema.index({ user: 1, date: -1 });
-bazarEntrySchema.index({ group: 1, date: -1 });
-bazarEntrySchema.index({ product: 1 });
+bazarEntrySchema.index({ user: 1, isDeleted: 1, date: -1, createdAt: -1 });
+bazarEntrySchema.index({ group: 1, isDeleted: 1, date: -1, createdAt: -1 });
+bazarEntrySchema.index({ product: 1, isDeleted: 1 });
 
 export const BazarEntryModel = mongoose.model<BazarEntry>("BazarEntry", bazarEntrySchema);
