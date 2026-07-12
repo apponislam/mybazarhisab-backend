@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
 import httpStatus from "http-status";
 import ApiError from "../../../errors/ApiError";
-import { UserModel } from "../auth/auth.model";
 import { ActivityModel } from "./activity.model";
 import { ActivityType } from "./activity.interface";
 
@@ -41,15 +40,9 @@ const logActivity = (
     }
 };
 
-const getAllActivities = async (userId: string, query: any) => {
+const getAllActivities = async (userId: string, groupId: string | undefined, query: any) => {
     const { page = 1, limit = 20 } = query;
 
-    const user = await UserModel.findOne({ _id: userId, isDeleted: false });
-    if (!user) {
-        throw new ApiError(httpStatus.NOT_FOUND, "User not found");
-    }
-
-    const groupId = user.groupId;
     const filter: any = { isDeleted: false };
     if (groupId) {
         filter.group = groupId;
@@ -78,7 +71,52 @@ const getAllActivities = async (userId: string, query: any) => {
     };
 };
 
+const deleteActivity = async (activityId: string) => {
+    const activity = await ActivityModel.findOneAndUpdate(
+        { _id: activityId, isDeleted: false },
+        { $set: { isDeleted: true } },
+        { new: true }
+    );
+
+    if (!activity) {
+        throw new ApiError(httpStatus.NOT_FOUND, "Activity log not found");
+    }
+
+    return activity;
+};
+
+const clearActivities = async (startDate?: string, endDate?: string, action?: ActivityType) => {
+    if (!startDate && !endDate && !action) {
+        throw new ApiError(httpStatus.BAD_REQUEST, "Please specify a date range or an action type to clear activities");
+    }
+
+    const filter: any = { isDeleted: false };
+
+    if (startDate || endDate) {
+        filter.createdAt = {};
+        if (startDate) filter.createdAt.$gte = new Date(startDate);
+        if (endDate) filter.createdAt.$lte = new Date(endDate);
+    }
+
+    if (action) {
+        filter.action = action;
+    }
+
+    const result = await ActivityModel.updateMany(filter, { $set: { isDeleted: true } });
+
+    let rangeMsg = "";
+    if (startDate && endDate) rangeMsg = ` from ${startDate} to ${endDate}`;
+    const actionMsg = action ? ` with action type "${action}"` : "";
+
+    return {
+        message: `Activity log cleared successfully${rangeMsg}${actionMsg}`,
+        count: result.modifiedCount,
+    };
+};
+
 export const activityServices = {
     logActivity,
     getAllActivities,
+    deleteActivity,
+    clearActivities,
 };
