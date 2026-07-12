@@ -10,7 +10,9 @@ const createProduct = async (userId: string, data: Partial<Product>) => {
         ...data,
         user: userId,
     });
-    return product;
+    
+    // Return populated product
+    return await ProductModel.findById(product._id).populate("user", "name email phone profileImage");
 };
 
 const getAllProducts = async (userId: string, query: any) => {
@@ -27,6 +29,8 @@ const getAllProducts = async (userId: string, query: any) => {
 
     const skip = (Number(page) - 1) * Number(limit);
     const products = await ProductModel.find(filter)
+        .populate("user", "name email phone profileImage")
+        .populate("updatedBy", "name email phone profileImage")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(Number(limit));
@@ -45,7 +49,9 @@ const getAllProducts = async (userId: string, query: any) => {
 };
 
 const getProductById = async (userId: string, productId: string) => {
-    const product = await ProductModel.findOne({ _id: productId, isDeleted: false });
+    const product = await ProductModel.findOne({ _id: productId, isDeleted: false })
+        .populate("user", "name email phone profileImage")
+        .populate("updatedBy", "name email phone profileImage");
 
     if (!product) {
         throw new ApiError(httpStatus.NOT_FOUND, "Product not found");
@@ -57,9 +63,17 @@ const getProductById = async (userId: string, productId: string) => {
 const updateProduct = async (userId: string, productId: string, data: Partial<Product>) => {
     const product = await ProductModel.findOneAndUpdate(
         { _id: productId, isDeleted: false },
-        { $set: data },
+        { 
+            $set: {
+                ...data,
+                isEdited: true,
+                updatedBy: new mongoose.Types.ObjectId(userId)
+            }
+        },
         { new: true, runValidators: true }
-    );
+    )
+    .populate("user", "name email phone profileImage")
+    .populate("updatedBy", "name email phone profileImage");
 
     if (!product) {
         throw new ApiError(httpStatus.NOT_FOUND, "Product not found or not authorized");
@@ -73,7 +87,9 @@ const deleteProduct = async (userId: string, productId: string) => {
         { _id: productId, isDeleted: false },
         { $set: { isDeleted: true } },
         { new: true }
-    );
+    )
+    .populate("user", "name email phone profileImage")
+    .populate("updatedBy", "name email phone profileImage");
 
     if (!product) {
         throw new ApiError(httpStatus.NOT_FOUND, "Product not found or not authorized");
