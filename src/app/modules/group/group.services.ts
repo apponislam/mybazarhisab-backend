@@ -3,6 +3,7 @@ import httpStatus from "http-status";
 import ApiError from "../../../errors/ApiError";
 import { UserModel } from "../auth/auth.model";
 import { GroupModel } from "./group.model";
+import { activityServices } from "../activity/activity.services";
 
 const createGroup = async (userId: string, name: string) => {
     const session = await mongoose.startSession();
@@ -34,6 +35,16 @@ const createGroup = async (userId: string, name: string) => {
         // 3. Link user to group
         user.groupId = group._id;
         await user.save({ session });
+
+        // Log activity
+        await activityServices.createActivityLog(
+            userId,
+            "CREATE_GROUP",
+            `Created group "${group.name}"`,
+            group._id.toString(),
+            { groupId: group._id },
+            session
+        );
 
         await session.commitTransaction();
         session.endSession();
@@ -78,6 +89,16 @@ const joinGroup = async (userId: string, inviteCode: string) => {
         // 4. Link user to group
         user.groupId = group._id;
         await user.save({ session });
+
+        // Log activity
+        await activityServices.createActivityLog(
+            userId,
+            "JOIN_GROUP",
+            `Joined group "${group.name}"`,
+            group._id.toString(),
+            { groupId: group._id },
+            session
+        );
 
         await session.commitTransaction();
         session.endSession();
@@ -131,6 +152,16 @@ const leaveGroup = async (userId: string) => {
         // 4. Unlink user from group
         user.groupId = undefined;
         await user.save({ session });
+
+        // Log activity
+        await activityServices.createActivityLog(
+            userId,
+            "LEAVE_GROUP",
+            `Left group "${group.name}"`,
+            group._id.toString(),
+            { groupId: group._id },
+            session
+        );
 
         await session.commitTransaction();
         session.endSession();

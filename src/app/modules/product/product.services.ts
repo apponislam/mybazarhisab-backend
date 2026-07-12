@@ -4,6 +4,8 @@ import ApiError from "../../../errors/ApiError";
 import { BazarEntryModel } from "../bazar-entry/bazar-entry.model";
 import { Product } from "./product.interface";
 import { ProductModel } from "./product.model";
+import { UserModel } from "../auth/auth.model";
+import { activityServices } from "../activity/activity.services";
 
 const createProduct = async (userId: string, data: Partial<Product>) => {
     const product = await ProductModel.create({
@@ -11,7 +13,16 @@ const createProduct = async (userId: string, data: Partial<Product>) => {
         user: userId,
     });
     
-    // Return populated product
+    // Log activity
+    const user = await UserModel.findById(userId);
+    await activityServices.createActivityLog(
+        userId,
+        "CREATE_PRODUCT",
+        `Created product "${product.name}"`,
+        user?.groupId?.toString(),
+        { productId: product._id }
+    );
+
     return await ProductModel.findById(product._id).populate("user", "name email phone profileImage");
 };
 
@@ -79,6 +90,16 @@ const updateProduct = async (userId: string, productId: string, data: Partial<Pr
         throw new ApiError(httpStatus.NOT_FOUND, "Product not found or not authorized");
     }
 
+    // Log activity
+    const user = await UserModel.findById(userId);
+    await activityServices.createActivityLog(
+        userId,
+        "UPDATE_PRODUCT",
+        `Updated product "${product.name}"`,
+        user?.groupId?.toString(),
+        { productId: product._id }
+    );
+
     return product;
 };
 
@@ -95,10 +116,20 @@ const deleteProduct = async (userId: string, productId: string) => {
         throw new ApiError(httpStatus.NOT_FOUND, "Product not found or not authorized");
     }
 
+    // Log activity
+    const user = await UserModel.findById(userId);
+    await activityServices.createActivityLog(
+        userId,
+        "DELETE_PRODUCT",
+        `Deleted product "${product.name}"`,
+        user?.groupId?.toString(),
+        { productId: product._id }
+    );
+
     return product;
 };
 
-const mergeProducts = async (sourceProductId: string, targetProductId: string) => {
+const mergeProducts = async (adminId: string, sourceProductId: string, targetProductId: string) => {
     if (!mongoose.Types.ObjectId.isValid(sourceProductId) || !mongoose.Types.ObjectId.isValid(targetProductId)) {
         throw new ApiError(httpStatus.BAD_REQUEST, "Invalid product ID(s)");
     }
@@ -132,6 +163,16 @@ const mergeProducts = async (sourceProductId: string, targetProductId: string) =
 
         // 4. Delete the source product permanently
         await ProductModel.deleteOne({ _id: sourceProductId }).session(session);
+
+        // Log activity inside the transaction
+        await activityServices.createActivityLog(
+            adminId,
+            "MERGE_PRODUCTS",
+            `Merged product "${sourceProduct.name}" into "${targetProduct.name}"`,
+            undefined,
+            { sourceProductId, targetProductId },
+            session
+        );
 
         await session.commitTransaction();
         session.endSession();

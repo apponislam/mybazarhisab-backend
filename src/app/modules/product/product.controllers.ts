@@ -69,8 +69,9 @@ const deleteProduct = catchAsync(async (req: Request, res: Response) => {
 });
 
 const mergeProducts = catchAsync(async (req: Request, res: Response) => {
+    const adminId = req.user._id;
     const { sourceProductId, targetProductId } = req.body;
-    const result = await productServices.mergeProducts(sourceProductId as string, targetProductId as string);
+    const result = await productServices.mergeProducts(adminId.toString(), sourceProductId as string, targetProductId as string);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,

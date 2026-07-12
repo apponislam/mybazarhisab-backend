@@ -5,6 +5,7 @@ import { UserModel } from "../auth/auth.model";
 import { ProductModel } from "../product/product.model";
 import { BazarEntryModel } from "./bazar-entry.model";
 import { BazarEntry, BazarUnit } from "./bazar-entry.interface";
+import { activityServices } from "../activity/activity.services";
 
 const createBazarEntry = async (
     userId: string,
@@ -18,50 +19,50 @@ const createBazarEntry = async (
         date?: Date;
     }
 ) => {
+    const { productId, name, price, quantity = 1, unit, notes, date = new Date() } = payload;
+
+    if (!name || !name.trim()) {
+        throw new ApiError(httpStatus.BAD_REQUEST, "Product name is required");
+    }
+
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-        const { productId, name, price, quantity = 1, unit, notes, date = new Date() } = payload;
-
-        if (!name || !name.trim()) {
-            throw new ApiError(httpStatus.BAD_REQUEST, "Product name is required");
-        }
-
-        // Get user group
+        // 1. Fetch user to verify their existence and retrieve groupId if present
         const user = await UserModel.findOne({ _id: userId, isDeleted: false }).session(session);
         if (!user) {
             throw new ApiError(httpStatus.NOT_FOUND, "User not found");
         }
         const groupId = user.groupId;
 
-        let product = null;
+        let product;
 
-        // 1. If productId is provided from frontend dropdown, verify it exists globally
-        if (productId && mongoose.Types.ObjectId.isValid(productId)) {
+        // 2. Resolve target product
+        if (productId) {
             product = await ProductModel.findOne({ _id: productId, isDeleted: false }).session(session);
-        }
-
-        // 2. If no product was found by id, fallback to lookup by name (case-insensitive) to prevent duplicates
-        if (!product) {
+            if (!product) {
+                throw new ApiError(httpStatus.NOT_FOUND, "Product not found");
+            }
+        } else {
+            // Search case-insensitive name globally across all products
             product = await ProductModel.findOne({
                 name: { $regex: new RegExp("^" + name.trim() + "$", "i") },
                 isDeleted: false,
             }).session(session);
-        }
 
-        // 3. If product does not exist, create a new one globally
-        if (!product) {
-            const [newProduct] = await ProductModel.create(
-                [
-                    {
-                        name: name.trim(),
-                        user: userId,
-                    },
-                ],
-                { session }
-            );
-            product = newProduct;
+            if (!product) {
+                // 3. Create global product if not exists
+                product = await ProductModel.create(
+                    [
+                        {
+                            name: name.trim(),
+                            user: userId,
+                        },
+                    ],
+                    { session }
+                ).then((res) => res[0]);
+            }
         }
 
         // 4. Create daily bazar entry under the user's group if they have one
@@ -79,6 +80,16 @@ const createBazarEntry = async (
                 },
             ],
             { session }
+        );
+
+        // Log activity inside session
+        await activityServices.createActivityLog(
+            userId,
+            "CREATE_BAZAR_ENTRY",
+            `Created daily bazar entry for "${product.name}" (${quantity} ${unit || ""}) with cost of ${price * quantity}`,
+            groupId?.toString(),
+            { entryId: entry._id },
+            session
         );
 
         await session.commitTransaction();
@@ -208,6 +219,16 @@ const updateBazarEntry = async (userId: string, id: string, data: Partial<BazarE
         throw new ApiError(httpStatus.NOT_FOUND, "Bazar entry not found or not authorized");
     }
 
+    // Log activity
+    const productName = (entry.product as any)?.name || "";
+    await activityServices.createActivityLog(
+        userId,
+        "UPDATE_BAZAR_ENTRY",
+        `Updated daily bazar entry for "${productName}"`,
+        groupId?.toString(),
+        { entryId: entry._id }
+    );
+
     return entry;
 };
 
@@ -229,11 +250,21 @@ const deleteBazarEntry = async (userId: string, id: string) => {
         filter,
         { $set: { isDeleted: true } },
         { new: true }
-    );
+    ).populate("product");
 
     if (!entry) {
         throw new ApiError(httpStatus.NOT_FOUND, "Bazar entry not found or not authorized");
     }
+
+    // Log activity
+    const productName = (entry.product as any)?.name || "";
+    await activityServices.createActivityLog(
+        userId,
+        "DELETE_BAZAR_ENTRY",
+        `Deleted daily bazar entry for "${productName}"`,
+        groupId?.toString(),
+        { entryId: entry._id }
+    );
 
     return entry;
 };
