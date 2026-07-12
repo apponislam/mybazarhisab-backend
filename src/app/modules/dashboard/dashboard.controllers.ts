@@ -17,7 +17,7 @@ const getAdminDashboardStats = catchAsync(async (req: Request, res: Response) =>
 
 const getUserDashboardStats = catchAsync(async (req: Request, res: Response) => {
     const userId = req.user._id;
-    const result = await dashboardServices.getUserDashboardStats(userId.toString());
+    const result = await dashboardServices.getUserDashboardStats(userId.toString(), req.user.groupId?.toString());
 
     sendResponse(res, {
         statusCode: httpStatus.OK,

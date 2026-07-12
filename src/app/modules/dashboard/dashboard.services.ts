@@ -33,14 +33,7 @@ const getAdminDashboardStats = async () => {
     };
 };
 
-const getUserDashboardStats = async (userId: string) => {
-    const user = await UserModel.findOne({ _id: userId, isDeleted: false });
-    if (!user) {
-        throw new ApiError(httpStatus.NOT_FOUND, "User not found");
-    }
-
-    const groupId = user.groupId;
-
+const getUserDashboardStats = async (userId: string, groupId: string | undefined) => {
     // 1. Total members in their group
     let totalMembers = 1;
     if (groupId) {
@@ -71,11 +64,55 @@ const getUserDashboardStats = async (userId: string) => {
         isDeleted: false,
     });
 
+    // 5. Expense tracking calculation ranges
+    const now = new Date();
+
+    const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfThisMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+
+    const startOfThisYear = new Date(now.getFullYear(), 0, 1);
+    const endOfThisYear = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+
+    const startOfPrevYear = new Date(now.getFullYear() - 1, 0, 1);
+    const endOfPrevYear = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999);
+
+    const getExpenseForRange = async (start: Date, end: Date): Promise<number> => {
+        const result = await BazarEntryModel.aggregate([
+            {
+                $match: {
+                    ...groupEntriesFilter,
+                    date: { $gte: start, $lte: end },
+                },
+            },
+            {
+                $group: {
+                    _id: null,
+                    total: { $sum: { $multiply: ["$price", "$quantity"] } },
+                },
+            },
+        ]);
+        return result[0]?.total || 0;
+    };
+
+    const [thisMonthExpense, prevMonthExpense, thisYearExpense, prevYearExpense] = await Promise.all([
+        getExpenseForRange(startOfThisMonth, endOfThisMonth),
+        getExpenseForRange(startOfPrevMonth, endOfPrevMonth),
+        getExpenseForRange(startOfThisYear, endOfThisYear),
+        getExpenseForRange(startOfPrevYear, endOfPrevYear),
+    ]);
+
     return {
         totalMembers,
         totalGroupBazarEntries,
         totalMyBazarEntries,
         totalProductsCreatedByMe,
+        thisMonthExpense,
+        prevMonthExpense,
+        thisYearExpense,
+        prevYearExpense,
     };
 };
 
