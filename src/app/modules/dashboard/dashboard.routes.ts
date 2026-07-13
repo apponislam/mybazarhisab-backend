@@ -11,5 +11,6 @@ router.get("/admin-stats", auth, authorize(["ADMIN"]), dashboardControllers.getA
 // User 
 router.get("/user-stats", auth, dashboardControllers.getUserDashboardStats);
 router.get("/monthly-trend", auth, dashboardControllers.getMonthlyExpenseTrend);
+router.get("/product-price-growth/:productId", auth, dashboardControllers.getProductPriceGrowthTrend);
 
 export const dashboardRoutes = router;

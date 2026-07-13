@@ -40,8 +40,28 @@ const getMonthlyExpenseTrend = catchAsync(async (req: Request, res: Response) =>
     });
 });
 
+const getProductPriceGrowthTrend = catchAsync(async (req: Request, res: Response) => {
+    const userId = req.user._id;
+    const { productId } = req.params;
+    const result = await dashboardServices.getProductPriceGrowthTrend(
+        userId.toString(),
+        req.user.groupId?.toString(),
+        productId as string,
+        req.query
+    );
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Product price growth trend retrieved successfully",
+        meta: result.meta,
+        data: result.data,
+    });
+});
+
 export const dashboardControllers = {
     getAdminDashboardStats,
     getUserDashboardStats,
     getMonthlyExpenseTrend,
+    getProductPriceGrowthTrend,
 };

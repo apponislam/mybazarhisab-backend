@@ -1,6 +1,6 @@
 import { Types } from "mongoose";
 
-export type BazarUnit = "KG" | "LITER" | "PIECE" | "GM";
+export type BazarUnit = "KG" | "PIECE" | "GM";
 
 export interface BazarEntry {
     product: Types.ObjectId;

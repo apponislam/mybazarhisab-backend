@@ -1,5 +1,4 @@
-import httpStatus from "http-status";
-import ApiError from "../../../errors/ApiError";
+import mongoose from "mongoose";
 import { UserModel } from "../auth/auth.model";
 import { GroupModel } from "../group/group.model";
 import { ProductModel } from "../product/product.model";
@@ -299,8 +298,78 @@ const getMonthlyExpenseTrend = async (userId: string, groupId: string | undefine
     }
 };
 
+const getProductPriceGrowthTrend = async (
+    userId: string,
+    groupId: string | undefined,
+    productId: string,
+    query: { page?: string; limit?: string }
+) => {
+    const { page = 1, limit = 10 } = query;
+
+    const filter: any = {
+        product: new mongoose.Types.ObjectId(productId),
+        isDeleted: false,
+    };
+    if (groupId) {
+        filter.group = new mongoose.Types.ObjectId(groupId);
+    } else {
+        filter.user = new mongoose.Types.ObjectId(userId);
+    }
+
+    const entries = await BazarEntryModel.find(filter)
+        .sort({ date: 1, createdAt: 1 });
+
+    const normalizedEntries = entries.map((entry) => {
+        const qty = entry.quantity || 1;
+        let pricePerUnit = entry.price / qty;
+        let unit: string = entry.unit || "PIECE";
+
+        if (unit === "GM") {
+            pricePerUnit = (entry.price / qty) * 1000;
+            unit = "KG";
+        } else if (unit === "LITER") {
+            unit = "LITRE";
+        }
+
+        return {
+            date: entry.date,
+            pricePerUnit: parseFloat(pricePerUnit.toFixed(2)),
+            unit,
+            notes: entry.notes,
+        };
+    });
+
+    // Apply consecutive deduplication (only keep the last consecutive entry for a given price)
+    const filteredTrend = [];
+    for (let i = 0; i < normalizedEntries.length; i++) {
+        const current = normalizedEntries[i];
+        const next = normalizedEntries[i + 1];
+
+        if (!next || current.pricePerUnit !== next.pricePerUnit) {
+            filteredTrend.push(current);
+        }
+    }
+
+    const total = filteredTrend.length;
+    const skip = (Number(page) - 1) * Number(limit);
+    const paginatedData = filteredTrend.slice(skip, skip + Number(limit));
+
+    return {
+        meta: {
+            page: Number(page),
+            limit: Number(limit),
+            total,
+            totalPages: Math.ceil(total / Number(limit)),
+            hasNext: Number(page) * Number(limit) < total,
+            hasPrev: Number(page) > 1,
+        },
+        data: paginatedData,
+    };
+};
+
 export const dashboardServices = {
     getAdminDashboardStats,
     getUserDashboardStats,
     getMonthlyExpenseTrend,
+    getProductPriceGrowthTrend,
 };

@@ -21,7 +21,7 @@ const bazarEntrySchema = new Schema<BazarEntry>(
         },
         unit: {
             type: String,
-            enum: ["KG", "LITER", "PIECE", "GM"],
+            enum: ["KG", "PIECE", "GM"],
             trim: true,
         },
         date: {
