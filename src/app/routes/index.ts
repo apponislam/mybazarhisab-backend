@@ -6,6 +6,7 @@ import { groupRoutes } from "../modules/group/group.routes";
 import { dashboardRoutes } from "../modules/dashboard/dashboard.routes";
 import { activityRoutes } from "../modules/activity/activity.routes";
 import { billRoutes } from "../modules/bill/bill.routes";
+import { contactRoutes } from "../modules/contact/contact.routes";
 
 const router = express.Router();
 
@@ -37,6 +38,10 @@ const moduleRoutes = [
     {
         path: "/bills",
         route: billRoutes,
+    },
+    {
+        path: "/contacts",
+        route: contactRoutes,
     },
 ];
 
