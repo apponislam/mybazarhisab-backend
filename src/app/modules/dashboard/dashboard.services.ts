@@ -327,8 +327,6 @@ const getProductPriceGrowthTrend = async (
         if (unit === "GM") {
             pricePerUnit = (entry.price / qty) * 1000;
             unit = "KG";
-        } else if (unit === "LITER") {
-            unit = "LITRE";
         }
 
         return {
