@@ -7,6 +7,7 @@ import { dashboardRoutes } from "../modules/dashboard/dashboard.routes";
 import { activityRoutes } from "../modules/activity/activity.routes";
 import { billRoutes } from "../modules/bill/bill.routes";
 import { contactRoutes } from "../modules/contact/contact.routes";
+import { feedbackRoutes } from "../modules/feedback/feedback.routes";
 
 const router = express.Router();
 
@@ -42,6 +43,10 @@ const moduleRoutes = [
     {
         path: "/contacts",
         route: contactRoutes,
+    },
+    {
+        path: "/feedbacks",
+        route: feedbackRoutes,
     },
 ];
 
