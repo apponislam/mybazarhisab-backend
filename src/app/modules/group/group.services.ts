@@ -78,6 +78,11 @@ const joinGroup = async (userId: string, inviteCode: string) => {
             throw new ApiError(httpStatus.NOT_FOUND, "Invalid invite code or group not found");
         }
 
+        // Limit maximum members to 20
+        if (group.members.length >= 20) {
+            throw new ApiError(httpStatus.BAD_REQUEST, "Group is full. A maximum of 20 members are allowed per group.");
+        }
+
         // 3. Add member to group
         if (group.members.includes(new mongoose.Types.ObjectId(userId))) {
             throw new ApiError(httpStatus.BAD_REQUEST, "You are already a member of this group");
