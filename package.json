@@ -1,8 +1,8 @@
 {
     "name": "mybazarhisab-backend",
     "version": "1.0.0",
-    "description": "",
-    "main": "index.js",
+    "description": "Backend API for Bazar Hisab - shared household budget and grocery expense tracking system.",
+    "main": "dist/server.js",
     "scripts": {
         "build": "tsc",
         "start": "node dist/server.js",
@@ -13,8 +13,18 @@
         "worker:dev": "ts-node-dev src/worker.ts",
         "worker": "node dist/worker.js"
     },
-    "keywords": [],
-    "author": "",
+    "keywords": [
+        "bazar-hisab",
+        "expense-tracker",
+        "grocery-tracker",
+        "household-budget",
+        "shared-expense",
+        "mongodb",
+        "express",
+        "typescript",
+        "rest-api"
+    ],
+    "author": "Appon Islam",
     "license": "MIT",
     "type": "commonjs",
     "dependencies": {
