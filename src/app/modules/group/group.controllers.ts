@@ -54,9 +54,22 @@ const getMyGroup = catchAsync(async (req: Request, res: Response) => {
     });
 });
 
+const checkGroupMembership = catchAsync(async (req: Request, res: Response) => {
+    const userId = req.user._id;
+    const result = await groupServices.getMyGroup(userId.toString());
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: result ? "User is a member of a group" : "User is not a member of any group",
+        data: !!result,
+    });
+});
+
 export const groupControllers = {
     createGroup,
     joinGroup,
     leaveGroup,
     getMyGroup,
+    checkGroupMembership,
 };
