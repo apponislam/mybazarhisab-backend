@@ -1,3 +1,5 @@
+import dns from "dns";
+dns.setServers(["1.1.1.1", "8.8.8.8"]);
 import { Server } from "http";
 import app from "./app";
 import mongoose from "mongoose";
@@ -5,14 +7,12 @@ import http from "http";
 import config from "./app/config";
 import { seedAdmin } from "./app/modules/auth/auth.seed";
 
-
 let server: Server;
 
 async function main() {
     try {
         await mongoose.connect(config.mongodb_url as string);
         server = http.createServer(app);
-
 
         seedAdmin();
 
