@@ -17,6 +17,7 @@ const register = catchAsync(async (req: Request, res: Response) => {
         password: data.password,
         role: data.role,
         phone: data.phone,
+        profileImage: data.profileImage,
     };
 
     // Basic validation
@@ -183,6 +184,7 @@ const updateProfile = catchAsync(async (req: Request, res: Response) => {
     const updateData: any = {
         ...(data.name && { name: data.name }),
         ...(data.phone && { phone: data.phone }),
+        ...(data.profileImage && { profileImage: data.profileImage }),
         ...(data.language && { language: data.language }),
         ...(data.address && { address: data.address }),
         ...(data.availabilityLocation && { availabilityLocation: data.availabilityLocation }),
