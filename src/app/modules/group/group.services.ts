@@ -181,11 +181,18 @@ const getMyGroup = async (userId: string) => {
     const user = await UserModel.findOne({ _id: userId, isDeleted: false }).populate({
         path: "groupId",
         match: { isDeleted: false },
-        populate: {
-            path: "members",
-            select: "name email phone profileImage",
-            match: { isDeleted: false }
-        }
+        populate: [
+            {
+                path: "members",
+                select: "name email phone profileImage",
+                match: { isDeleted: false }
+            },
+            {
+                path: "creator",
+                select: "name email phone profileImage",
+                match: { isDeleted: false }
+            }
+        ]
     });
 
     if (!user || !user.groupId) {

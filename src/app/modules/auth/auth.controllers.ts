@@ -182,14 +182,14 @@ const updateProfile = catchAsync(async (req: Request, res: Response) => {
 
     // Construct update data based on the provided fields
     const updateData: any = {
-        ...(data.name && { name: data.name }),
-        ...(data.phone && { phone: data.phone }),
-        ...(data.profileImage && { profileImage: data.profileImage }),
-        ...(data.language && { language: data.language }),
-        ...(data.address && { address: data.address }),
-        ...(data.availabilityLocation && { availabilityLocation: data.availabilityLocation }),
-        ...(data.preferences && { preferences: data.preferences }),
-        ...(data.aboutme && { aboutme: data.aboutme }),
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.phone !== undefined && { phone: data.phone }),
+        ...(data.profileImage !== undefined && { profileImage: data.profileImage }),
+        ...(data.language !== undefined && { language: data.language }),
+        ...(data.address !== undefined && { address: data.address }),
+        ...(data.availabilityLocation !== undefined && { availabilityLocation: data.availabilityLocation }),
+        ...(data.preferences !== undefined && { preferences: data.preferences }),
+        ...(data.aboutme !== undefined && { aboutme: data.aboutme }),
     };
 
     const updatedUser = await authServices.updateProfile(req.user._id, updateData);
