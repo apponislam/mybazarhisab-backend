@@ -26,38 +26,68 @@ const createProduct = async (userId: string, groupId: string | undefined, data: 
 };
 
 const getAllProducts = async (
-    userId: string,
     query: { searchTerm?: string; page?: string; limit?: string }
 ) => {
     const { searchTerm, page = 1, limit = 10 } = query;
+    const pageNum = Number(page);
+    const limitNum = Number(limit);
+    const skip = (pageNum - 1) * limitNum;
 
     const filter: any = { isDeleted: false };
 
     if (searchTerm) {
+        // With search: include all products (including 18+)
         filter.$or = [
             { name: { $regex: searchTerm, $options: "i" } },
             { description: { $regex: searchTerm, $options: "i" } },
         ];
+
+        const products = await ProductModel.find(filter)
+            .populate("user", "name email phone profileImage")
+            .populate("updatedBy", "name email phone profileImage")
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limitNum);
+
+        const total = await ProductModel.countDocuments(filter);
+
+        return {
+            meta: {
+                page: pageNum,
+                limit: limitNum,
+                total,
+                totalPages: Math.ceil(total / limitNum),
+                hasNext: pageNum * limitNum < total,
+                hasPrev: pageNum > 1,
+            },
+            data: products,
+        };
     }
 
-    const skip = (Number(page) - 1) * Number(limit);
-    const products = await ProductModel.find(filter)
-        .populate("user", "name email phone profileImage")
-        .populate("updatedBy", "name email phone profileImage")
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(Number(limit));
+    // Without search: exclude 18+ products and return in random order
+    filter.is18Plus = { $ne: true };
 
     const total = await ProductModel.countDocuments(filter);
 
+    const products = await ProductModel.aggregate([
+        { $match: filter },
+        { $sample: { size: limitNum } },
+    ]);
+
+    // Populate after aggregation
+    await ProductModel.populate(products, [
+        { path: "user", select: "name email phone profileImage" },
+        { path: "updatedBy", select: "name email phone profileImage" },
+    ]);
+
     return {
         meta: {
-            page: Number(page),
-            limit: Number(limit),
+            page: pageNum,
+            limit: limitNum,
             total,
-            totalPages: Math.ceil(total / Number(limit)),
-            hasNext: Number(page) * Number(limit) < total,
-            hasPrev: Number(page) > 1,
+            totalPages: Math.ceil(total / limitNum),
+            hasNext: pageNum * limitNum < total,
+            hasPrev: pageNum > 1,
         },
         data: products,
     };
