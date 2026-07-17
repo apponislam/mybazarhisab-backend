@@ -104,9 +104,9 @@ const createBazarEntry = async (
 const getAllBazarEntries = async (
     userId: string,
     groupId: string | undefined,
-    query: { startDate?: string; endDate?: string; page?: string; limit?: string }
+    query: { filter?: string; startDate?: string; endDate?: string; page?: string; limit?: string }
 ) => {
-    const { startDate, endDate, page = 1, limit = 10 } = query;
+    const { filter: dateFilter, startDate, endDate, page = 1, limit = 10 } = query;
 
     const filter: any = { isDeleted: false };
     if (groupId) {
@@ -115,10 +115,18 @@ const getAllBazarEntries = async (
         filter.user = userId;
     }
 
-    if (startDate || endDate) {
+    if (dateFilter?.toUpperCase() === "ALL") {
+        // No date filter — return all data
+    } else if (startDate || endDate) {
         filter.date = {};
         if (startDate) filter.date.$gte = new Date(startDate);
         if (endDate) filter.date.$lte = new Date(endDate);
+    } else {
+        // Default: current month
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        filter.date = { $gte: firstDay, $lte: lastDay };
     }
 
     const skip = (Number(page) - 1) * Number(limit);
