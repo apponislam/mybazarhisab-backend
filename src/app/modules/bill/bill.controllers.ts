@@ -68,10 +68,23 @@ const deleteBill = catchAsync(async (req: Request, res: Response) => {
     });
 });
 
+const getBillStats = catchAsync(async (req: Request, res: Response) => {
+    const userId = req.user._id;
+    const result = await billServices.getBillStats(userId.toString(), req.user.groupId?.toString(), req.query);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Bill stats retrieved successfully",
+        data: result,
+    });
+});
+
 export const billControllers = {
     createBill,
     getAllBills,
     getBillById,
+    getBillStats,
     updateBill,
     deleteBill,
 };

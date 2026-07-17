@@ -6,6 +6,7 @@ const router = Router();
 
 router.post("/", auth, billControllers.createBill);
 router.get("/", auth, billControllers.getAllBills);
+router.get("/stats", auth, billControllers.getBillStats);
 router.get("/:id", auth, billControllers.getBillById);
 router.patch("/:id", auth, billControllers.updateBill);
 router.delete("/:id", auth, billControllers.deleteBill);
