@@ -251,11 +251,56 @@ const deleteBazarEntry = async (userId: string, groupId: string | undefined, id:
 
     return entry;
 };
+const getBazarEntryStats = async (
+    userId: string,
+    groupId: string | undefined,
+    query: { filter?: string; startDate?: string; endDate?: string }
+) => {
+    const { filter: dateFilter, startDate, endDate } = query;
+
+    const filter: any = { isDeleted: false };
+    if (groupId) {
+        filter.group = groupId;
+    } else {
+        filter.user = userId;
+    }
+
+    if (dateFilter?.toUpperCase() === "ALL") {
+        // No date filter
+    } else if (startDate || endDate) {
+        filter.date = {};
+        if (startDate) filter.date.$gte = new Date(startDate);
+        if (endDate) filter.date.$lte = new Date(endDate);
+    } else {
+        // Default: current month
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        filter.date = { $gte: firstDay, $lte: lastDay };
+    }
+
+    const totalEntries = await BazarEntryModel.countDocuments(filter);
+
+    const totalAmountAggregation = await BazarEntryModel.aggregate([
+        { $match: filter },
+        {
+            $group: {
+                _id: null,
+                totalAmount: { $sum: { $multiply: ["$price", "$quantity"] } },
+            },
+        },
+    ]);
+
+    const totalAmount = totalAmountAggregation[0]?.totalAmount || 0;
+
+    return { totalEntries, totalAmount };
+};
 
 export const bazarEntryServices = {
     createBazarEntry,
     getAllBazarEntries,
     getBazarEntryById,
+    getBazarEntryStats,
     updateBazarEntry,
     deleteBazarEntry,
 };

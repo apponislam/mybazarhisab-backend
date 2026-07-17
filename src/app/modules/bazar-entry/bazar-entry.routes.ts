@@ -6,6 +6,7 @@ const router = Router();
 
 router.post("/", auth, bazarEntryControllers.createBazarEntry);
 router.get("/", auth, bazarEntryControllers.getAllBazarEntries);
+router.get("/stats", auth, bazarEntryControllers.getBazarEntryStats);
 router.get("/:id", auth, bazarEntryControllers.getBazarEntryById);
 router.patch("/:id", auth, bazarEntryControllers.updateBazarEntry);
 router.delete("/:id", auth, bazarEntryControllers.deleteBazarEntry);

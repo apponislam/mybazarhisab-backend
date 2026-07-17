@@ -68,10 +68,23 @@ const deleteBazarEntry = catchAsync(async (req: Request, res: Response) => {
     });
 });
 
+const getBazarEntryStats = catchAsync(async (req: Request, res: Response) => {
+    const userId = req.user._id;
+    const result = await bazarEntryServices.getBazarEntryStats(userId.toString(), req.user.groupId?.toString(), req.query);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Bazar entry stats retrieved successfully",
+        data: result,
+    });
+});
+
 export const bazarEntryControllers = {
     createBazarEntry,
     getAllBazarEntries,
     getBazarEntryById,
+    getBazarEntryStats,
     updateBazarEntry,
     deleteBazarEntry,
 };
