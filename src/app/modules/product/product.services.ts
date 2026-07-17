@@ -43,8 +43,7 @@ const getAllProducts = async (
         ];
 
         const products = await ProductModel.find(filter)
-            .populate("user", "name email phone profileImage")
-            .populate("updatedBy", "name email phone profileImage")
+            .select("name photo is18Plus description")
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limitNum);
@@ -72,13 +71,10 @@ const getAllProducts = async (
     const products = await ProductModel.aggregate([
         { $match: filter },
         { $sample: { size: limitNum } },
+        { $project: { name: 1, photo: 1, is18Plus: 1, description: 1 } },
     ]);
 
-    // Populate after aggregation
-    await ProductModel.populate(products, [
-        { path: "user", select: "name email phone profileImage" },
-        { path: "updatedBy", select: "name email phone profileImage" },
-    ]);
+
 
     return {
         meta: {
