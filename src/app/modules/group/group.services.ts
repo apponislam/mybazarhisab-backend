@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import httpStatus from "http-status";
+import crypto from "crypto";
 import ApiError from "../../../errors/ApiError";
 import { UserModel } from "../auth/auth.model";
 import { GroupModel } from "./group.model";
@@ -219,16 +220,11 @@ const updateGroup = async (userId: string, name: string) => {
         throw new ApiError(httpStatus.NOT_FOUND, "Group not found");
     }
 
-    // 3. Only creator can edit group details
-    if (group.creator.toString() !== userId) {
-        throw new ApiError(httpStatus.FORBIDDEN, "Only the group creator can edit group details");
-    }
-
     if (!name || !name.trim()) {
         throw new ApiError(httpStatus.BAD_REQUEST, "Group name is required");
     }
 
-    // 4. Update group name
+    // 3. Update group name
     group.name = name.trim();
     await group.save();
 
@@ -244,10 +240,42 @@ const updateGroup = async (userId: string, name: string) => {
     return group;
 };
 
+const generateInviteCode = async (userId: string) => {
+    // 1. Verify user exists and has a group
+    const user = await UserModel.findOne({ _id: userId, isDeleted: false });
+    if (!user) {
+        throw new ApiError(httpStatus.NOT_FOUND, "User not registered");
+    }
+
+    if (!user.groupId) {
+        throw new ApiError(httpStatus.BAD_REQUEST, "You are not a member of any group");
+    }
+
+    // 2. Find group
+    const group = await GroupModel.findOne({ _id: user.groupId, isDeleted: false });
+    if (!group) {
+        throw new ApiError(httpStatus.NOT_FOUND, "Group not found");
+    }
+
+    // 3. Generate a new code
+    let code = "BAZAR-" + crypto.randomBytes(3).toString("hex").toUpperCase();
+    let codeExists = await GroupModel.findOne({ inviteCode: code });
+    while (codeExists) {
+        code = "BAZAR-" + crypto.randomBytes(3).toString("hex").toUpperCase();
+        codeExists = await GroupModel.findOne({ inviteCode: code });
+    }
+
+    group.inviteCode = code;
+    await group.save();
+
+    return group;
+};
+
 export const groupServices = {
     createGroup,
     joinGroup,
     leaveGroup,
     getMyGroup,
     updateGroup,
+    generateInviteCode,
 };

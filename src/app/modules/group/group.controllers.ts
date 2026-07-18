@@ -79,6 +79,18 @@ const updateGroup = catchAsync(async (req: Request, res: Response) => {
     });
 });
 
+const generateInviteCode = catchAsync(async (req: Request, res: Response) => {
+    const userId = req.user._id;
+    const result = await groupServices.generateInviteCode(userId.toString());
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "New invitation code generated successfully",
+        data: result,
+    });
+});
+
 export const groupControllers = {
     createGroup,
     joinGroup,
@@ -86,4 +98,5 @@ export const groupControllers = {
     getMyGroup,
     checkGroupMembership,
     updateGroup,
+    generateInviteCode,
 };
