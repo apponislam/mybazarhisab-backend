@@ -66,10 +66,24 @@ const checkGroupMembership = catchAsync(async (req: Request, res: Response) => {
     });
 });
 
+const updateGroup = catchAsync(async (req: Request, res: Response) => {
+    const userId = req.user._id;
+    const { name } = req.body;
+    const result = await groupServices.updateGroup(userId.toString(), name);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Group updated successfully",
+        data: result,
+    });
+});
+
 export const groupControllers = {
     createGroup,
     joinGroup,
     leaveGroup,
     getMyGroup,
     checkGroupMembership,
+    updateGroup,
 };

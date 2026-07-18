@@ -202,9 +202,52 @@ const getMyGroup = async (userId: string) => {
     return user.groupId;
 };
 
+const updateGroup = async (userId: string, name: string) => {
+    // 1. Verify user exists
+    const user = await UserModel.findOne({ _id: userId, isDeleted: false });
+    if (!user) {
+        throw new ApiError(httpStatus.NOT_FOUND, "User not registered");
+    }
+
+    if (!user.groupId) {
+        throw new ApiError(httpStatus.BAD_REQUEST, "You are not a member of any group");
+    }
+
+    // 2. Find group
+    const group = await GroupModel.findOne({ _id: user.groupId, isDeleted: false });
+    if (!group) {
+        throw new ApiError(httpStatus.NOT_FOUND, "Group not found");
+    }
+
+    // 3. Only creator can edit group details
+    if (group.creator.toString() !== userId) {
+        throw new ApiError(httpStatus.FORBIDDEN, "Only the group creator can edit group details");
+    }
+
+    if (!name || !name.trim()) {
+        throw new ApiError(httpStatus.BAD_REQUEST, "Group name is required");
+    }
+
+    // 4. Update group name
+    group.name = name.trim();
+    await group.save();
+
+    // Log activity in the background
+    activityServices.logActivity(
+        userId,
+        ActivityType.UPDATE_GROUP,
+        `Updated group name to "${group.name}"`,
+        group._id.toString(),
+        { groupId: group._id }
+    );
+
+    return group;
+};
+
 export const groupServices = {
     createGroup,
     joinGroup,
     leaveGroup,
     getMyGroup,
+    updateGroup,
 };
