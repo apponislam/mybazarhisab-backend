@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Statement Preview | Bazar Hisab</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%230891b2%22/><text y=%22.9em%22 x=%22.1em%22 font-size=%2270%22 font-weight=%2280%22 fill=%22white%22 font-family=%22Outfit%22>B</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1f2937;
+            --secondary: #4b5563;
+            --border: #d1d5db;
+            --bg: #ffffff;
+            --text-main: #000000;
+            --text-dim: #374151;
+            --text-muted: #6b7280;
+            --bazar-color: #065f46;
+            --bill-color: #1e3a8a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            line-height: 1.4;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* Document Header block */
+        .document-header {
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .logo-area h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+            line-height: 1.1;
+        }
+
+        .logo-area p {
+            color: var(--secondary);
+            font-size: 0.85rem;
+            margin-top: 2px;
+        }
+
+        .meta-area {
+            text-align: right;
+            font-size: 0.85rem;
+            color: var(--secondary);
+        }
+
+        .meta-area strong {
+            color: var(--primary);
+        }
+
+        /* Compact Summary Block */
+        .summary-box {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+            background: #f9fafb;
+        }
+
+        .summary-item {
+            padding: 0.75rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            border-right: 1px solid var(--border);
+        }
+
+        .summary-item:last-child {
+            border-right: none;
+        }
+
+        .summary-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+        }
+
+        .summary-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        /* Statement Table */
+        .statement-table-container {
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        th {
+            background: #f3f4f6;
+            border-bottom: 2px solid var(--border);
+            padding: 0.6rem 0.75rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 0.6rem 0.75rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+            color: var(--text-dim);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .date-cell {
+            white-space: nowrap;
+        }
+
+        .desc-cell {
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .qty-subtext {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: 400;
+            margin-left: 0.5rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .badge-bazar {
+            background: rgba(5, 150, 105, 0.1);
+            color: var(--bazar-color);
+            border: 1px solid rgba(5, 150, 105, 0.2);
+        }
+
+        .badge-bill {
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--bill-color);
+            border: 1px solid rgba(37, 99, 235, 0.2);
+        }
+
+        .amount-cell {
+            font-weight: 700;
+            text-align: right;
+            white-space: nowrap;
+            color: var(--text-main);
+        }
+
+        .empty-state {
+            display: none;
+            padding: 3rem;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        /* Print Settings */
+        @media print {
+            body {
+                padding: 0;
+                background: #ffffff;
+            }
+
+            .container {
+                max-width: 100%;
+            }
+
+            th {
+                background: #f3f4f6 !important;
+                color: #000000 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .summary-box {
+                background: #f9fafb !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .badge-bazar {
+                background: #e6f4ea !important;
+                color: var(--bazar-color) !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .badge-bill {
+                background: #e8f0fe !important;
+                color: var(--bill-color) !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Professional Statement Header -->
+        <div class="document-header">
+            <div class="logo-area">
+                <h1>Bazar Hisab</h1>
+                <p>Consolidated Monthly Statement</p>
+            </div>
+            <div class="meta-area">
+                <div>Statement Period: <strong>July 2026</strong></div>
+                <div>Generated Date: <strong>July 18, 2026</strong></div>
+            </div>
+        </div>
+
+        <!-- Clean Compact Summary Cards -->
+        <div class="summary-box">
+            <div class="summary-item">
+                <span class="summary-label">Total Combined</span>
+                <span class="summary-value">৳16,929.00</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Bazar Expenses</span>
+                <span class="summary-value">৳1,429.00</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Utility Bills</span>
+                <span class="summary-value">৳15,500.00</span>
+            </div>
+        </div>
+
+        <!-- Consolidated Table -->
+        <div class="statement-table-container">
+            <table id="statementTable">
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">Date</th>
+                        <th style="width: 35%;">Description / Details</th>
+                        <th style="width: 12%;">Type</th>
+                        <th style="width: 13%;">Category</th>
+                        <th style="width: 13%;">Added By</th>
+                        <th style="text-align: right; width: 12%;">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="item-row" data-type="BILL">
+                        <td class="date-cell">2026-07-18</td>
+                        <td class="desc-cell">July Electricity Bill</td>
+                        <td><span class="badge badge-bill">Bill</span></td>
+                        <td>ELECTRICITY</td>
+                        <td>Appon Islam</td>
+                        <td class="amount-cell">৳2,500.00</td>
+                    </tr>
+                    <tr class="item-row" data-type="BAZAR">
+                        <td class="date-cell">2026-07-18</td>
+                        <td class="desc-cell">
+                            Eggs
+                            <span class="qty-subtext">(12 PIECE @ ৳12)</span>
+                        </td>
+                        <td><span class="badge badge-bazar">Bazar</span></td>
+                        <td>GROCERY</td>
+                        <td>Appon Islam</td>
+                        <td class="amount-cell">৳144.00</td>
+                    </tr>
+                    <tr class="item-row" data-type="BILL">
+                        <td class="date-cell">2026-07-17</td>
+                        <td class="desc-cell">Wifi Monthly Subscription</td>
+                        <td><span class="badge badge-bill">Bill</span></td>
+                        <td>WIFI</td>
+                        <td>Appon Islam</td>
+                        <td class="amount-cell">৳1,000.00</td>
+                    </tr>
+                    <tr class="item-row" data-type="BAZAR">
+                        <td class="date-cell">2026-07-17</td>
+                        <td class="desc-cell">
+                            Rui Fish
+                            <span class="qty-subtext">(1.5 KG @ ৳400)</span>
+                        </td>
+                        <td><span class="badge badge-bazar">Bazar</span></td>
+                        <td>GROCERY</td>
+                        <td>Appon Islam</td>
+                        <td class="amount-cell">৳600.00</td>
+                    </tr>
+                    <tr class="item-row" data-type="BAZAR">
+                        <td class="date-cell">2026-07-16</td>
+                        <td class="desc-cell">
+                            Onion
+                            <span class="qty-subtext">(2 KG @ ৳80)</span>
+                        </td>
+                        <td><span class="badge badge-bazar">Bazar</span></td>
+                        <td>GROCERY</td>
+                        <td>Appon Islam</td>
+                        <td class="amount-cell">৳160.00</td>
+                    </tr>
+                    <tr class="item-row" data-type="BAZAR">
+                        <td class="date-cell">2026-07-16</td>
+                        <td class="desc-cell">
+                            Miniket Rice
+                            <span class="qty-subtext">(5 KG @ ৳65)</span>
+                        </td>
+                        <td><span class="badge badge-bazar">Bazar</span></td>
+                        <td>GROCERY</td>
+                        <td>Appon Islam</td>
+                        <td class="amount-cell">৳325.00</td>
+                    </tr>
+                    <tr class="item-row" data-type="BILL">
+                        <td class="date-cell">2026-07-15</td>
+                        <td class="desc-cell">Apartment House Rent</td>
+                        <td><span class="badge badge-bill">Bill</span></td>
+                        <td>RENT</td>
+                        <td>Appon Islam</td>
+                        <td class="amount-cell">৳12,000.00</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</body>
+</html>

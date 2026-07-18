@@ -1,4 +1,8 @@
 import mongoose from "mongoose";
+import fs from "fs";
+import path from "path";
+import puppeteer from "puppeteer";
+import { getStatementHtmlTemplate } from "./statement";
 import { UserModel } from "../auth/auth.model";
 import { GroupModel } from "../group/group.model";
 import { ProductModel } from "../product/product.model";
@@ -388,9 +392,192 @@ const getProductPriceGrowthTrend = async (
     };
 };
 
+const getStatementHtml = async (
+    userId: string,
+    groupId: string | undefined,
+    query: { startDate?: string; endDate?: string; year?: string }
+) => {
+    let start: Date;
+    let end: Date;
+    let periodText: string;
+
+    const currentYear = new Date().getFullYear();
+
+    if (query.year) {
+        const y = parseInt(query.year);
+        start = new Date(Date.UTC(y, 0, 1, 0, 0, 0, 0));
+        end = new Date(Date.UTC(y, 11, 31, 23, 59, 59, 999));
+        periodText = `Year ${y}`;
+    } else if (query.startDate || query.endDate) {
+        if (query.startDate) {
+            const [y, m, d] = query.startDate.split("-").map(Number);
+            start = new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0));
+        } else {
+            start = new Date(Date.UTC(currentYear, 0, 1, 0, 0, 0, 0));
+        }
+
+        if (query.endDate) {
+            const [y, m, d] = query.endDate.split("-").map(Number);
+            end = new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999));
+        } else {
+            end = new Date(Date.UTC(currentYear, 11, 31, 23, 59, 59, 999));
+        }
+
+        const format = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+        periodText = `${format(start)} - ${format(end)}`;
+    } else {
+        const now = new Date();
+        start = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0));
+        end = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999));
+        periodText = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+    }
+
+    const groupEntriesFilter: any = { isDeleted: false };
+    if (groupId) {
+        groupEntriesFilter.group = new mongoose.Types.ObjectId(groupId);
+    } else {
+        groupEntriesFilter.user = new mongoose.Types.ObjectId(userId);
+    }
+
+    const filter = {
+        ...groupEntriesFilter,
+        date: { $gte: start, $lte: end }
+    };
+
+    const bazarEntries = await BazarEntryModel.find(filter)
+        .populate("product")
+        .populate("user", "name email phone profileImage")
+        .sort({ date: -1, createdAt: -1 });
+
+    const bills = await BillModel.find(filter)
+        .populate("user", "name email phone profileImage")
+        .sort({ date: -1, createdAt: -1 });
+
+    interface StatementItem {
+        date: Date;
+        type: "BAZAR" | "BILL";
+        name: string;
+        category: string;
+        quantityText?: string;
+        user: string;
+        amount: number;
+    }
+
+    const combined: StatementItem[] = [];
+
+    let totalBazar = 0;
+    bazarEntries.forEach(entry => {
+        const qty = entry.quantity || 1;
+        const totalCost = entry.price * qty;
+        totalBazar += totalCost;
+        combined.push({
+            date: entry.date,
+            type: "BAZAR",
+            name: (entry.product as any)?.name || "Unknown Product",
+            category: "GROCERY",
+            quantityText: `(${qty} ${entry.unit || "PIECE"} @ ৳${entry.price})`,
+            user: (entry.user as any)?.name || "Unknown",
+            amount: totalCost
+        });
+    });
+
+    let totalBills = 0;
+    bills.forEach(bill => {
+        totalBills += bill.amount;
+        combined.push({
+            date: bill.date,
+            type: "BILL",
+            name: bill.title,
+            category: bill.category,
+            user: (bill.user as any)?.name || "Unknown",
+            amount: bill.amount
+        });
+    });
+
+    // Sort combined by date descending
+    combined.sort((a, b) => b.date.getTime() - a.date.getTime());
+
+    const totalCombined = totalBazar + totalBills;
+
+    // Build Table Rows HTML
+    let tableRows = "";
+    combined.forEach(item => {
+        const dateStr = item.date.toISOString().split("T")[0];
+        const badgeClass = item.type === "BAZAR" ? "badge-bazar" : "badge-bill";
+        const badgeText = item.type === "BAZAR" ? "Bazar" : "Bill";
+        const quantityHtml = item.quantityText ? ` <span class="qty-subtext">${item.quantityText}</span>` : "";
+
+        tableRows += `
+            <tr class="item-row" data-type="${item.type}">
+                <td class="date-cell">${dateStr}</td>
+                <td class="desc-cell">${item.name}${quantityHtml}</td>
+                <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+                <td>${item.category}</td>
+                <td>${item.user}</td>
+                <td class="amount-cell">৳${item.amount.toFixed(2)}</td>
+            </tr>
+        `;
+    });
+
+    return getStatementHtmlTemplate({
+        periodText,
+        generatedDate: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+        totalCombined: totalCombined.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        totalBazar: totalBazar.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        totalBills: totalBills.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        tableRows,
+        tableStyle: combined.length === 0 ? "display: none;" : "display: table;",
+        emptyStateStyle: combined.length === 0 ? "display: block;" : "display: none;"
+    });
+};
+
+const getStatementPdf = async (
+    userId: string,
+    groupId: string | undefined,
+    query: { startDate?: string; endDate?: string; year?: string }
+): Promise<Buffer> => {
+    // 1. Generate dynamic HTML using the existing helper
+    const htmlContent = await getStatementHtml(userId, groupId, query);
+
+    // 2. Launch Puppeteer to render HTML into a PDF
+    const browser = await puppeteer.launch({
+        headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"]
+    });
+
+    try {
+        const page = await browser.newPage();
+        
+        // Load the HTML content directly
+        await page.setContent(htmlContent, {
+            waitUntil: "domcontentloaded"
+        });
+
+        // Print page to PDF buffer
+        const pdfBuffer = await page.pdf({
+            format: "A4",
+            printBackground: true,
+            margin: {
+                top: "15mm",
+                bottom: "15mm",
+                left: "15mm",
+                right: "15mm"
+            }
+        });
+
+        await browser.close();
+        return Buffer.from(pdfBuffer);
+    } catch (error) {
+        await browser.close();
+        throw error;
+    }
+};;
+
 export const dashboardServices = {
     getAdminDashboardStats,
     getUserDashboardStats,
     getMonthlyExpenseTrend,
     getProductPriceGrowthTrend,
+    getStatementHtml,
+    getStatementPdf,
 };

@@ -59,9 +59,19 @@ const getProductPriceGrowthTrend = catchAsync(async (req: Request, res: Response
     });
 });
 
+const getStatementPdf = catchAsync(async (req: Request, res: Response) => {
+    const userId = req.user._id;
+    const result = await dashboardServices.getStatementPdf(userId.toString(), req.user.groupId?.toString(), req.query);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", "inline; filename=statement.pdf");
+    res.status(httpStatus.OK).send(result);
+});
+
 export const dashboardControllers = {
     getAdminDashboardStats,
     getUserDashboardStats,
     getMonthlyExpenseTrend,
     getProductPriceGrowthTrend,
+    getStatementPdf,
 };
