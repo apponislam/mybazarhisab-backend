@@ -543,20 +543,24 @@ const getStatementPdf = async (
     // 2. Launch Puppeteer dynamically (Vercel-compatible in production, local standard Puppeteer in development)
     let browser;
     if (process.env.NODE_ENV === "production" || process.env.VERCEL) {
-        browser = await puppeteerCore.launch({
-            args: (chromium as any).args,
-            defaultViewport: (chromium as any).defaultViewport,
-            executablePath: await (chromium as any).executablePath(
-                "https://github.com/Sparticuz/chromium/releases/download/v123.0.1/chromium-v123.0.1-pack.tar"
-            ),
-            headless: (chromium as any).headless === "shell" ? true : (chromium as any).headless,
-        });
+        try {
+            const execPath = await (chromium as any).executablePath();
+            browser = await puppeteerCore.launch({
+                args: (chromium as any).args,
+                defaultViewport: (chromium as any).defaultViewport,
+                executablePath: execPath,
+                headless: true,
+            });
+        } catch (err) {
+            console.error('Puppeteer launch failed on Vercel:', err);
+            throw err;
+        }
     } else {
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         const puppeteer = require("puppeteer");
         browser = await puppeteer.launch({
             headless: true,
-            args: ["--no-sandbox", "--disable-setuid-sandbox"]
+            args: ["--no-sandbox", "--disable-setuid-sandbox"],
         });
     }
 
