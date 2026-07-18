@@ -11,12 +11,12 @@ const bazarEntrySchema = new Schema<BazarEntry>(
         price: {
             type: Number,
             required: [true, "Price is required"],
-            min: [0, "Price cannot be negative"],
+            min: [0.01, "Price must be greater than 0"],
         },
         quantity: {
             type: Number,
             required: [true, "Quantity is required"],
-            min: [0.001, "Quantity must be greater than 0"],
+            min: [0.01, "Quantity must be greater than 0"],
             default: 1,
         },
         unit: {

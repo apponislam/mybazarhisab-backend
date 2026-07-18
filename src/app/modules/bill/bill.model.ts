@@ -28,7 +28,7 @@ const billSchema = new Schema<Bill>(
         amount: {
             type: Number,
             required: [true, "Amount is required"],
-            min: [0, "Amount must be a positive number"],
+            min: [0.01, "Amount must be greater than 0"],
         },
         date: {
             type: Date,
