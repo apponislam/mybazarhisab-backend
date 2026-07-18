@@ -1,7 +1,5 @@
 import mongoose from "mongoose";
-import fs from "fs";
-import path from "path";
-import puppeteerCore from "puppeteer-core";
+// puppeteer-core will be imported dynamically via import()
 import chromium from "@sparticuz/chromium-min";
 import { getStatementHtmlTemplate } from "./statement";
 import { UserModel } from "../auth/auth.model";
@@ -78,9 +76,7 @@ const getYearlyTrendAggregation = async (model: any, filter: any, year: number) 
         {
             $group: {
                 _id: { $month: "$date" },
-                total: isBazarModel
-                    ? { $sum: { $multiply: ["$price", "$quantity"] } }
-                    : { $sum: "$amount" },
+                total: isBazarModel ? { $sum: { $multiply: ["$price", "$quantity"] } } : { $sum: "$amount" },
             },
         },
     ]);
@@ -109,9 +105,7 @@ const getMonthlyTrendAggregation = async (model: any, filter: any, year: number,
         {
             $group: {
                 _id: { $dayOfMonth: "$date" },
-                total: isBazarModel
-                    ? { $sum: { $multiply: ["$price", "$quantity"] } }
-                    : { $sum: "$amount" },
+                total: isBazarModel ? { $sum: { $multiply: ["$price", "$quantity"] } } : { $sum: "$amount" },
             },
         },
     ]);
@@ -223,16 +217,7 @@ const getUserDashboardStats = async (userId: string, groupId: string | undefined
     const startOfPrevYear = new Date(now.getFullYear() - 1, 0, 1);
     const endOfPrevYear = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999);
 
-    const [
-        thisMonthBazarExpense,
-        prevMonthBazarExpense,
-        thisYearBazarExpense,
-        prevYearBazarExpense,
-        thisMonthBillExpense,
-        prevMonthBillExpense,
-        thisYearBillExpense,
-        prevYearBillExpense,
-    ] = await Promise.all([
+    const [thisMonthBazarExpense, prevMonthBazarExpense, thisYearBazarExpense, prevYearBazarExpense, thisMonthBillExpense, prevMonthBillExpense, thisYearBillExpense, prevYearBillExpense] = await Promise.all([
         getExpenseAggregation(groupEntriesFilter, startOfThisMonth, endOfThisMonth),
         getExpenseAggregation(groupEntriesFilter, startOfPrevMonth, endOfPrevMonth),
         getExpenseAggregation(groupEntriesFilter, startOfThisYear, endOfThisYear),
@@ -284,10 +269,7 @@ const getMonthlyExpenseTrend = async (userId: string, groupId: string | undefine
         const month = now.getMonth();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-        const [bazarMap, billMap] = await Promise.all([
-            getMonthlyTrendAggregation(BazarEntryModel, groupEntriesFilter, year, month),
-            getMonthlyTrendAggregation(BillModel, groupEntriesFilter, year, month),
-        ]);
+        const [bazarMap, billMap] = await Promise.all([getMonthlyTrendAggregation(BazarEntryModel, groupEntriesFilter, year, month), getMonthlyTrendAggregation(BillModel, groupEntriesFilter, year, month)]);
 
         const trend = [];
         for (let day = 1; day <= daysInMonth; day++) {
@@ -306,10 +288,7 @@ const getMonthlyExpenseTrend = async (userId: string, groupId: string | undefine
         const year = now.getFullYear();
         const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-        const [bazarMap, billMap] = await Promise.all([
-            getYearlyTrendAggregation(BazarEntryModel, groupEntriesFilter, year),
-            getYearlyTrendAggregation(BillModel, groupEntriesFilter, year),
-        ]);
+        const [bazarMap, billMap] = await Promise.all([getYearlyTrendAggregation(BazarEntryModel, groupEntriesFilter, year), getYearlyTrendAggregation(BillModel, groupEntriesFilter, year)]);
 
         const trend = monthNames.map((name, index) => {
             const monthNum = index + 1; // 1-12
@@ -326,12 +305,7 @@ const getMonthlyExpenseTrend = async (userId: string, groupId: string | undefine
     }
 };
 
-const getProductPriceGrowthTrend = async (
-    userId: string,
-    groupId: string | undefined,
-    productId: string,
-    query: { page?: string; limit?: string }
-) => {
+const getProductPriceGrowthTrend = async (userId: string, groupId: string | undefined, productId: string, query: { page?: string; limit?: string }) => {
     const { page = 1, limit = 10 } = query;
 
     const filter: any = {
@@ -344,8 +318,7 @@ const getProductPriceGrowthTrend = async (
         filter.user = new mongoose.Types.ObjectId(userId);
     }
 
-    const entries = await BazarEntryModel.find(filter)
-        .sort({ date: 1, createdAt: 1 });
+    const entries = await BazarEntryModel.find(filter).sort({ date: 1, createdAt: 1 });
 
     const normalizedEntries = entries.map((entry) => {
         const qty = entry.quantity || 1;
@@ -393,11 +366,7 @@ const getProductPriceGrowthTrend = async (
     };
 };
 
-const getStatementHtml = async (
-    userId: string,
-    groupId: string | undefined,
-    query: { startDate?: string; endDate?: string; year?: string }
-) => {
+const getStatementHtml = async (userId: string, groupId: string | undefined, query: { startDate?: string; endDate?: string; year?: string }) => {
     let start: Date;
     let end: Date;
     let periodText: string;
@@ -424,13 +393,13 @@ const getStatementHtml = async (
             end = new Date(Date.UTC(currentYear, 11, 31, 23, 59, 59, 999));
         }
 
-        const format = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+        const format = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
         periodText = `${format(start)} - ${format(end)}`;
     } else {
         const now = new Date();
         start = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0));
         end = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999));
-        periodText = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+        periodText = now.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
     }
 
     const groupEntriesFilter: any = { isDeleted: false };
@@ -442,17 +411,12 @@ const getStatementHtml = async (
 
     const filter = {
         ...groupEntriesFilter,
-        date: { $gte: start, $lte: end }
+        date: { $gte: start, $lte: end },
     };
 
-    const bazarEntries = await BazarEntryModel.find(filter)
-        .populate("product")
-        .populate("user", "name email phone profileImage")
-        .sort({ date: -1, createdAt: -1 });
+    const bazarEntries = await BazarEntryModel.find(filter).populate("product").populate("user", "name email phone profileImage").sort({ date: -1, createdAt: -1 });
 
-    const bills = await BillModel.find(filter)
-        .populate("user", "name email phone profileImage")
-        .sort({ date: -1, createdAt: -1 });
+    const bills = await BillModel.find(filter).populate("user", "name email phone profileImage").sort({ date: -1, createdAt: -1 });
 
     interface StatementItem {
         date: Date;
@@ -467,7 +431,7 @@ const getStatementHtml = async (
     const combined: StatementItem[] = [];
 
     let totalBazar = 0;
-    bazarEntries.forEach(entry => {
+    bazarEntries.forEach((entry) => {
         const qty = entry.quantity || 1;
         const totalCost = entry.price * qty;
         totalBazar += totalCost;
@@ -478,12 +442,12 @@ const getStatementHtml = async (
             category: "GROCERY",
             quantityText: `(${qty} ${entry.unit || "PIECE"} @ ৳${entry.price})`,
             user: (entry.user as any)?.name || "Unknown",
-            amount: totalCost
+            amount: totalCost,
         });
     });
 
     let totalBills = 0;
-    bills.forEach(bill => {
+    bills.forEach((bill) => {
         totalBills += bill.amount;
         combined.push({
             date: bill.date,
@@ -491,7 +455,7 @@ const getStatementHtml = async (
             name: bill.title,
             category: bill.category,
             user: (bill.user as any)?.name || "Unknown",
-            amount: bill.amount
+            amount: bill.amount,
         });
     });
 
@@ -502,7 +466,7 @@ const getStatementHtml = async (
 
     // Build Table Rows HTML
     let tableRows = "";
-    combined.forEach(item => {
+    combined.forEach((item) => {
         const dateStr = item.date.toISOString().split("T")[0];
         const badgeClass = item.type === "BAZAR" ? "badge-bazar" : "badge-bill";
         const badgeText = item.type === "BAZAR" ? "Bazar" : "Bill";
@@ -522,21 +486,17 @@ const getStatementHtml = async (
 
     return getStatementHtmlTemplate({
         periodText,
-        generatedDate: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+        generatedDate: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
         totalCombined: totalCombined.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
         totalBazar: totalBazar.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
         totalBills: totalBills.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
         tableRows,
         tableStyle: combined.length === 0 ? "display: none;" : "display: table;",
-        emptyStateStyle: combined.length === 0 ? "display: block;" : "display: none;"
+        emptyStateStyle: combined.length === 0 ? "display: block;" : "display: none;",
     });
 };
 
-const getStatementPdf = async (
-    userId: string,
-    groupId: string | undefined,
-    query: { startDate?: string; endDate?: string; year?: string }
-): Promise<Buffer> => {
+const getStatementPdf = async (userId: string, groupId: string | undefined, query: { startDate?: string; endDate?: string; year?: string }): Promise<Buffer> => {
     // 1. Generate dynamic HTML using the existing helper
     const htmlContent = await getStatementHtml(userId, groupId, query);
 
@@ -544,6 +504,7 @@ const getStatementPdf = async (
     let browser;
     if (process.env.NODE_ENV === "production" || process.env.VERCEL) {
         try {
+            const puppeteerCore = (await import("puppeteer-core")).default;
             const execPath = await (chromium as any).executablePath();
             browser = await puppeteerCore.launch({
                 args: (chromium as any).args,
@@ -552,7 +513,7 @@ const getStatementPdf = async (
                 headless: true,
             });
         } catch (err) {
-            console.error('Puppeteer launch failed on Vercel:', err);
+            console.error("Puppeteer launch failed on Vercel:", err);
             throw err;
         }
     } else {
@@ -566,10 +527,10 @@ const getStatementPdf = async (
 
     try {
         const page = await browser.newPage();
-        
+
         // Load the HTML content directly
         await page.setContent(htmlContent, {
-            waitUntil: "domcontentloaded"
+            waitUntil: "domcontentloaded",
         });
 
         // Print page to PDF buffer
@@ -580,8 +541,8 @@ const getStatementPdf = async (
                 top: "15mm",
                 bottom: "15mm",
                 left: "15mm",
-                right: "15mm"
-            }
+                right: "15mm",
+            },
         });
 
         await browser.close();
@@ -590,7 +551,7 @@ const getStatementPdf = async (
         await browser.close();
         throw error;
     }
-};;
+};
 
 export const dashboardServices = {
     getAdminDashboardStats,
