@@ -5,12 +5,25 @@ import { ProductModel } from "../product/product.model";
 import { BazarEntryModel } from "../bazar-entry/bazar-entry.model";
 import { BillModel } from "../bill/bill.model";
 
+// Helper to cast string IDs to ObjectIds in aggregate matches
+const normalizeFilterForAggregation = (filter: any) => {
+    const normalized = { ...filter };
+    if (normalized.group && typeof normalized.group === "string" && mongoose.Types.ObjectId.isValid(normalized.group)) {
+        normalized.group = new mongoose.Types.ObjectId(normalized.group);
+    }
+    if (normalized.user && typeof normalized.user === "string" && mongoose.Types.ObjectId.isValid(normalized.user)) {
+        normalized.user = new mongoose.Types.ObjectId(normalized.user);
+    }
+    return normalized;
+};
+
 // Shared helpers for aggregations
 const getExpenseAggregation = async (filter: any, start: Date, end: Date): Promise<number> => {
+    const matchFilter = normalizeFilterForAggregation(filter);
     const result = await BazarEntryModel.aggregate([
         {
             $match: {
-                ...filter,
+                ...matchFilter,
                 date: { $gte: start, $lte: end },
             },
         },
@@ -25,10 +38,11 @@ const getExpenseAggregation = async (filter: any, start: Date, end: Date): Promi
 };
 
 const getBillExpenseAggregation = async (filter: any, start: Date, end: Date): Promise<number> => {
+    const matchFilter = normalizeFilterForAggregation(filter);
     const result = await BillModel.aggregate([
         {
             $match: {
-                ...filter,
+                ...matchFilter,
                 date: { $gte: start, $lte: end },
             },
         },
@@ -47,11 +61,12 @@ const getYearlyTrendAggregation = async (model: any, filter: any, year: number) 
     const startOfYear = new Date(year, 0, 1);
     const endOfYear = new Date(year, 11, 31, 23, 59, 59, 999);
     const isBazarModel = model.modelName === "BazarEntry";
+    const matchFilter = normalizeFilterForAggregation(filter);
 
     const result = await model.aggregate([
         {
             $match: {
-                ...filter,
+                ...matchFilter,
                 date: { $gte: startOfYear, $lte: endOfYear },
             },
         },
@@ -77,11 +92,12 @@ const getMonthlyTrendAggregation = async (model: any, filter: any, year: number,
     const startOfMonth = new Date(year, month, 1);
     const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59, 999);
     const isBazarModel = model.modelName === "BazarEntry";
+    const matchFilter = normalizeFilterForAggregation(filter);
 
     const result = await model.aggregate([
         {
             $match: {
-                ...filter,
+                ...matchFilter,
                 date: { $gte: startOfMonth, $lte: endOfMonth },
             },
         },
@@ -159,23 +175,30 @@ const getUserDashboardStats = async (userId: string, groupId: string | undefined
         }
     }
 
-    // 2. Total group bazar entries (or user's own if no group)
+    // 2. Total group bazar entries + bills (or user's own if no group)
     const groupEntriesFilter: any = { isDeleted: false };
     if (groupId) {
         groupEntriesFilter.group = groupId;
     } else {
         groupEntriesFilter.user = userId;
     }
-    const totalGroupBazarEntries = await BazarEntryModel.countDocuments(groupEntriesFilter);
+    const totalBazarCount = await BazarEntryModel.countDocuments(groupEntriesFilter);
+    const totalBillCount = await BillModel.countDocuments(groupEntriesFilter);
+    const totalGroupBazarAndBills = totalBazarCount + totalBillCount;
 
-    // 3. Total daily entries created by the user personally
-    const totalMyBazarEntries = await BazarEntryModel.countDocuments({
+    // 3. Total daily entries + bills created by the user personally
+    const myBazarCount = await BazarEntryModel.countDocuments({
         user: userId,
         isDeleted: false,
     });
+    const myBillCount = await BillModel.countDocuments({
+        user: userId,
+        isDeleted: false,
+    });
+    const totalMyBazarAndBills = myBazarCount + myBillCount;
 
     // 4. Total products created by the user personally
-    const totalProductsCreatedByMe = await ProductModel.countDocuments({
+    const totalNewProductsCreatedByMe = await ProductModel.countDocuments({
         user: userId,
         isDeleted: false,
     });
@@ -222,9 +245,9 @@ const getUserDashboardStats = async (userId: string, groupId: string | undefined
 
     return {
         totalMembers,
-        totalGroupBazarEntries,
-        totalMyBazarEntries,
-        totalProductsCreatedByMe,
+        totalGroupBazarAndBills,
+        totalMyBazarAndBills,
+        totalNewProductsCreatedByMe,
         thisMonthBazarExpense,
         prevMonthBazarExpense,
         thisYearBazarExpense,
