@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 // puppeteer-core will be imported dynamically via import()
-import chromium from "@sparticuz/chromium-min";
+// Dynamic import of @sparticuz/chromium-min for Vercel compatibility
 import { getStatementHtmlTemplate } from "./statement";
 import { UserModel } from "../auth/auth.model";
 import { GroupModel } from "../group/group.model";
@@ -505,10 +505,10 @@ const getStatementPdf = async (userId: string, groupId: string | undefined, quer
     if (process.env.NODE_ENV === "production" || process.env.VERCEL) {
         try {
             const puppeteerCore = (await import("puppeteer-core")).default;
-            const execPath = await (chromium as any).executablePath();
+            const chromium = (await import("@sparticuz/chromium-min")).default;
+            const execPath = await chromium.executablePath();
             browser = await puppeteerCore.launch({
-                args: (chromium as any).args,
-                defaultViewport: (chromium as any).defaultViewport,
+                args: chromium.args,
                 executablePath: execPath,
                 headless: true,
             });
@@ -517,8 +517,7 @@ const getStatementPdf = async (userId: string, groupId: string | undefined, quer
             throw err;
         }
     } else {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const puppeteer = require("puppeteer");
+                const puppeteer = (await import("puppeteer")).default;
         browser = await puppeteer.launch({
             headless: true,
             args: ["--no-sandbox", "--disable-setuid-sandbox"],
