@@ -8,6 +8,7 @@ import { activityRoutes } from "../modules/activity/activity.routes";
 import { billRoutes } from "../modules/bill/bill.routes";
 import { contactRoutes } from "../modules/contact/contact.routes";
 import { feedbackRoutes } from "../modules/feedback/feedback.routes";
+import { policyRoutes } from "../modules/policy/policy.routes";
 
 const router = express.Router();
 
@@ -47,6 +48,10 @@ const moduleRoutes = [
     {
         path: "/feedbacks",
         route: feedbackRoutes,
+    },
+    {
+        path: "/policies",
+        route: policyRoutes,
     },
 ];
 
