@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import path from "path";
 import fs from "fs";
+import morgan from "morgan";
 import notFound from "./errors/notFound";
 import globalErrorHandler from "./errors/globalErrorhandler";
 import router from "./app/routes";
@@ -17,6 +18,7 @@ const corsOptions = {
     credentials: true,
 };
 
+app.use(morgan("dev"));
 app.use(cors(corsOptions));
 
 app.use(express.json());
