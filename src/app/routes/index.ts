@@ -9,6 +9,7 @@ import { billRoutes } from "../modules/bill/bill.routes";
 import { contactRoutes } from "../modules/contact/contact.routes";
 import { feedbackRoutes } from "../modules/feedback/feedback.routes";
 import { policyRoutes } from "../modules/policy/policy.routes";
+import { reviewRoutes } from "../modules/review/review.routes";
 
 const router = express.Router();
 
@@ -48,6 +49,10 @@ const moduleRoutes = [
     {
         path: "/feedbacks",
         route: feedbackRoutes,
+    },
+    {
+        path: "/reviews",
+        route: reviewRoutes,
     },
     {
         path: "/policies",

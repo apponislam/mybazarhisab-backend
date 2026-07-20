@@ -17,9 +17,10 @@ const createFeedback = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAllFeedbacks = catchAsync(async (req: Request, res: Response) => {
+    const userId = req.user._id;
     const isAdmin = req.user?.role === "ADMIN";
 
-    const result = await feedbackServices.getAllFeedbacks(isAdmin, req.query);
+    const result = await feedbackServices.getAllFeedbacks(userId.toString(), isAdmin, req.query);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
@@ -30,14 +31,16 @@ const getAllFeedbacks = catchAsync(async (req: Request, res: Response) => {
     });
 });
 
-const toggleFeedbackVisibility = catchAsync(async (req: Request, res: Response) => {
+const updateFeedbackStatus = catchAsync(async (req: Request, res: Response) => {
     const { id } = req.params;
-    const result = await feedbackServices.toggleFeedbackVisibility(id as string);
+    const { status, adminNote } = req.body;
+
+    const result = await feedbackServices.updateFeedbackStatus(id as string, status, adminNote);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
         success: true,
-        message: "Feedback visibility status updated successfully",
+        message: "Feedback status updated successfully",
         data: result,
     });
 });
@@ -60,6 +63,6 @@ const deleteFeedback = catchAsync(async (req: Request, res: Response) => {
 export const feedbackControllers = {
     createFeedback,
     getAllFeedbacks,
-    toggleFeedbackVisibility,
+    updateFeedbackStatus,
     deleteFeedback,
 };

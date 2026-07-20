@@ -8,20 +8,29 @@ const feedbackSchema = new Schema<Feedback>(
             ref: "User",
             required: [true, "User ID is required"],
         },
-        rating: {
-            type: Number,
-            required: [true, "Rating is required"],
-            min: [1, "Rating must be at least 1"],
-            max: [5, "Rating cannot exceed 5"],
-        },
-        comment: {
+        category: {
             type: String,
-            required: [true, "Comment is required"],
+            enum: ["BUG", "FEATURE_REQUEST", "UI_UX", "GENERAL"],
+            default: "GENERAL",
+        },
+        subject: {
+            type: String,
+            required: [true, "Subject is required"],
             trim: true,
         },
-        isPublic: {
-            type: Boolean,
-            default: false,
+        message: {
+            type: String,
+            required: [true, "Message is required"],
+            trim: true,
+        },
+        status: {
+            type: String,
+            enum: ["PENDING", "IN_PROGRESS", "RESOLVED", "REJECTED"],
+            default: "PENDING",
+        },
+        adminNote: {
+            type: String,
+            trim: true,
         },
         isDeleted: {
             type: Boolean,
@@ -34,8 +43,7 @@ const feedbackSchema = new Schema<Feedback>(
     }
 );
 
-// Indexes for pagination and reviews querying
-feedbackSchema.index({ isPublic: 1, isDeleted: 1, createdAt: -1 });
+feedbackSchema.index({ status: 1, isDeleted: 1, createdAt: -1 });
 feedbackSchema.index({ user: 1, isDeleted: 1 });
 
 export const FeedbackModel = mongoose.model<Feedback>("Feedback", feedbackSchema);

@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import httpStatus from "http-status";
 import ApiError from "../../../errors/ApiError";
-import { Feedback } from "./feedback.interface";
+import { Feedback, TFeedbackStatus } from "./feedback.interface";
 import { FeedbackModel } from "./feedback.model";
 
 const createFeedback = async (userId: string, data: Partial<Feedback>) => {
@@ -12,19 +12,19 @@ const createFeedback = async (userId: string, data: Partial<Feedback>) => {
 };
 
 const getAllFeedbacks = async (
+    userId: string,
     isAdmin: boolean,
-    query: { isPublic?: string; page?: string; limit?: string }
+    query: { category?: string; status?: string; page?: string; limit?: string }
 ) => {
-    const { isPublic, page = 1, limit = 10 } = query;
+    const { category, status, page = 1, limit = 10 } = query;
 
     const filter: any = { isDeleted: false };
 
-    // Force public-only view for non-admins
     if (!isAdmin) {
-        filter.isPublic = true;
-    } else if (isPublic !== undefined) {
-        filter.isPublic = isPublic === "true";
+        filter.user = new mongoose.Types.ObjectId(userId);
     }
+    if (category) filter.category = category;
+    if (status) filter.status = status;
 
     const skip = (Number(page) - 1) * Number(limit);
     const feedbacks = await FeedbackModel.find(filter)
@@ -48,13 +48,14 @@ const getAllFeedbacks = async (
     };
 };
 
-const toggleFeedbackVisibility = async (id: string) => {
+const updateFeedbackStatus = async (id: string, status: TFeedbackStatus, adminNote?: string) => {
     const feedback = await FeedbackModel.findOne({ _id: id, isDeleted: false });
     if (!feedback) {
-        throw new ApiError(httpStatus.NOT_FOUND, "Feedback not found");
+        throw new ApiError(httpStatus.NOT_FOUND, "Feedback item not found");
     }
 
-    feedback.isPublic = !feedback.isPublic;
+    feedback.status = status;
+    if (adminNote !== undefined) feedback.adminNote = adminNote;
     await feedback.save();
 
     return await FeedbackModel.findById(feedback._id).populate("user", "name email phone profileImage");
@@ -73,7 +74,7 @@ const deleteFeedback = async (userId: string, isAdmin: boolean, id: string) => {
     );
 
     if (!feedback) {
-        throw new ApiError(httpStatus.NOT_FOUND, "Feedback review not found or not authorized");
+        throw new ApiError(httpStatus.NOT_FOUND, "Feedback item not found or not authorized");
     }
 
     return feedback;
@@ -82,6 +83,6 @@ const deleteFeedback = async (userId: string, isAdmin: boolean, id: string) => {
 export const feedbackServices = {
     createFeedback,
     getAllFeedbacks,
-    toggleFeedbackVisibility,
+    updateFeedbackStatus,
     deleteFeedback,
 };
