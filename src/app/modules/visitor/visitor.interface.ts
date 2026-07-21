@@ -9,7 +9,7 @@ export interface IVisitor {
     userAgent?: string;
     platform: VisitorPlatform;
     path?: string;
-    date: string; // YYYY-MM-DD format for easy daily aggregation
+    date: string;
     count: number;
     lastVisitedAt: Date;
     createdAt?: Date;
