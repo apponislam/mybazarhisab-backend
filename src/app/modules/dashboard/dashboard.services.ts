@@ -7,6 +7,7 @@ import { GroupModel } from "../group/group.model";
 import { ProductModel } from "../product/product.model";
 import { BazarEntryModel } from "../bazar-entry/bazar-entry.model";
 import { BillModel } from "../bill/bill.model";
+import { visitorServices } from "../visitor/visitor.services";
 
 // Helper to cast string IDs to ObjectIds in aggregate matches
 const normalizeFilterForAggregation = (filter: any) => {
@@ -152,6 +153,9 @@ const getAdminDashboardStats = async () => {
     const totalBillAmount = billAggregation[0]?.totalAmount || 0;
     const averageBillAmount = billAggregation[0]?.avgAmount || 0;
 
+    // Fetch visitor statistics
+    const visitorStats = await visitorServices.getVisitorAnalytics(7);
+
     return {
         totalUsers,
         totalGroups,
@@ -161,6 +165,13 @@ const getAdminDashboardStats = async () => {
         averageBazarEntry: parseFloat(averageBazarEntry.toFixed(2)),
         totalBillAmount: parseFloat(totalBillAmount.toFixed(2)),
         averageBillAmount: parseFloat(averageBillAmount.toFixed(2)),
+        visitors: {
+            todayTotalVisits: visitorStats.todayTotalVisits,
+            todayUniqueVisitors: visitorStats.todayUniqueVisitors,
+            totalVisits: visitorStats.totalVisits,
+            totalUniqueVisitors: visitorStats.totalUniqueVisitors,
+            dailyTrend: visitorStats.dailyTrend,
+        },
     };
 };
 

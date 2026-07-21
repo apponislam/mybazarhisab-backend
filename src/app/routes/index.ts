@@ -11,6 +11,7 @@ import { feedbackRoutes } from "../modules/feedback/feedback.routes";
 import { policyRoutes } from "../modules/policy/policy.routes";
 import { reviewRoutes } from "../modules/review/review.routes";
 import { faqRoutes } from "../modules/faq/faq.routes";
+import { visitorRoutes } from "../modules/visitor/visitor.routes";
 
 const router = express.Router();
 
@@ -62,6 +63,10 @@ const moduleRoutes = [
     {
         path: "/faqs",
         route: faqRoutes,
+    },
+    {
+        path: "/visitors",
+        route: visitorRoutes,
     },
 ];
 
