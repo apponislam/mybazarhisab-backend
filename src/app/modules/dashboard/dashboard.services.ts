@@ -168,8 +168,14 @@ const getAdminDashboardStats = async () => {
         visitors: {
             todayTotalVisits: visitorStats.todayTotalVisits,
             todayUniqueVisitors: visitorStats.todayUniqueVisitors,
+            todayWebVisits: visitorStats.todayWebVisits,
+            todayWebUnique: visitorStats.todayWebUnique,
+            todayAppVisits: visitorStats.todayAppVisits,
+            todayAppUnique: visitorStats.todayAppUnique,
+            todayPlatformBreakdown: visitorStats.todayPlatformBreakdown,
             totalVisits: visitorStats.totalVisits,
             totalUniqueVisitors: visitorStats.totalUniqueVisitors,
+            allTimePlatformBreakdown: visitorStats.allTimePlatformBreakdown,
             dailyTrend: visitorStats.dailyTrend,
         },
     };

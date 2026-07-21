@@ -16,6 +16,11 @@ const visitorSchema = new Schema<IVisitor>(
             type: String,
             default: "",
         },
+        platform: {
+            type: String,
+            enum: ["WEB", "ANDROID", "IOS", "APP"],
+            default: "WEB",
+        },
         path: {
             type: String,
             default: "/",
@@ -40,8 +45,9 @@ const visitorSchema = new Schema<IVisitor>(
     }
 );
 
-// Compound index to quickly find/upsert daily visits by IP & Date
-visitorSchema.index({ date: 1, ipAddress: 1 }, { unique: true });
+// Compound index to quickly find/upsert daily visits by IP, Date & Platform
+visitorSchema.index({ date: 1, ipAddress: 1, platform: 1 }, { unique: true });
 visitorSchema.index({ date: 1 });
+visitorSchema.index({ platform: 1 });
 
 export const VisitorModel = mongoose.model<IVisitor>("Visitor", visitorSchema);
