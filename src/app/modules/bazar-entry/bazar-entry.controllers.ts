@@ -80,11 +80,25 @@ const getBazarEntryStats = catchAsync(async (req: Request, res: Response) => {
     });
 });
 
+const createBulkBazarEntries = catchAsync(async (req: Request, res: Response) => {
+    const userId = req.user._id;
+    const result = await bazarEntryServices.createBulkBazarEntries(userId.toString(), req.user.groupId?.toString(), req.body);
+
+    sendResponse(res, {
+        statusCode: httpStatus.CREATED,
+        success: true,
+        message: "Bulk bazar entries created successfully",
+        data: result,
+    });
+});
+
 export const bazarEntryControllers = {
     createBazarEntry,
+    createBulkBazarEntries,
     getAllBazarEntries,
     getBazarEntryById,
     getBazarEntryStats,
     updateBazarEntry,
     deleteBazarEntry,
 };
+

@@ -280,11 +280,137 @@ const getBazarEntryStats = async (userId: string, groupId: string | undefined, q
     return { totalEntries, totalAmount };
 };
 
+const createBulkBazarEntries = async (
+    userId: string,
+    groupId: string | undefined,
+    payload: Array<{
+        productId?: string;
+        name: string;
+        price: number;
+        quantity?: number;
+        unit?: BazarUnit;
+        notes?: string;
+        date?: Date;
+    }> | { entries: Array<{
+        productId?: string;
+        name: string;
+        price: number;
+        quantity?: number;
+        unit?: BazarUnit;
+        notes?: string;
+        date?: Date;
+    }> }
+) => {
+    const entriesPayload = Array.isArray(payload) ? payload : payload?.entries;
+
+    if (!Array.isArray(entriesPayload) || entriesPayload.length === 0) {
+        throw new ApiError(httpStatus.BAD_REQUEST, "An array of bazar entries is required for bulk creation");
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const createdEntryIds: mongoose.Types.ObjectId[] = [];
+
+        for (const item of entriesPayload) {
+            const { productId, name, price, quantity = 1, unit, notes, date = new Date() } = item;
+            const priceNum = Number(price);
+            const quantityNum = Number(quantity);
+
+            if (!name || !name.trim()) {
+                throw new ApiError(httpStatus.BAD_REQUEST, "Product name is required for all entries");
+            }
+
+            if (isNaN(priceNum) || priceNum < 0) {
+                throw new ApiError(httpStatus.BAD_REQUEST, `Invalid price for product "${name}"`);
+            }
+
+            let product;
+
+            // 1. Resolve target product
+            if (productId && mongoose.Types.ObjectId.isValid(productId)) {
+                product = await ProductModel.findOne({ _id: productId, isDeleted: false }).session(session);
+                if (!product) {
+                    throw new ApiError(httpStatus.NOT_FOUND, `Product with ID ${productId} not found`);
+                }
+            } else {
+                // Search case-insensitive name globally
+                product = await ProductModel.findOne({
+                    name: { $regex: new RegExp("^" + name.trim() + "$", "i") },
+                    isDeleted: false,
+                }).session(session);
+
+                if (!product) {
+                    // Create global product if not exists
+                    product = await ProductModel.create(
+                        [
+                            {
+                                name: name.trim(),
+                                user: userId,
+                            },
+                        ],
+                        { session },
+                    ).then((res) => res[0]);
+                }
+            }
+
+            // 2. Create daily bazar entry
+            const [entry] = await BazarEntryModel.create(
+                [
+                    {
+                        product: product._id,
+                        price: priceNum,
+                        quantity: quantityNum,
+                        unit,
+                        notes,
+                        date,
+                        user: userId,
+                        group: groupId || undefined,
+                    },
+                ],
+                { session },
+            );
+
+            createdEntryIds.push(entry._id);
+        }
+
+        // Log background activity summarizing bulk creation
+        activityServices.logActivity(
+            userId,
+            ActivityType.CREATE_BAZAR_ENTRY,
+            `Bulk created ${createdEntryIds.length} daily bazar entries`,
+            groupId,
+            { entryCount: createdEntryIds.length }
+        );
+
+        await session.commitTransaction();
+        session.endSession();
+
+        const populatedEntries = await BazarEntryModel.find({ _id: { $in: createdEntryIds } })
+            .populate("product")
+            .populate("user", "name email phone profileImage")
+            .populate("group", "name creator")
+            .sort({ createdAt: -1 });
+
+        return {
+            count: populatedEntries.length,
+            entries: populatedEntries,
+        };
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        throw error;
+    }
+};
+
 export const bazarEntryServices = {
     createBazarEntry,
+    createBulkBazarEntries,
     getAllBazarEntries,
     getBazarEntryById,
     getBazarEntryStats,
     updateBazarEntry,
     deleteBazarEntry,
 };
+

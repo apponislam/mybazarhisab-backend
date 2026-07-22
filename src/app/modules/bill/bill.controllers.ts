@@ -80,8 +80,21 @@ const getBillStats = catchAsync(async (req: Request, res: Response) => {
     });
 });
 
+const createBulkBills = catchAsync(async (req: Request, res: Response) => {
+    const userId = req.user._id;
+    const result = await billServices.createBulkBills(userId.toString(), req.user.groupId?.toString(), req.body);
+
+    sendResponse(res, {
+        statusCode: httpStatus.CREATED,
+        success: true,
+        message: "Bulk bills logged successfully",
+        data: result,
+    });
+});
+
 export const billControllers = {
     createBill,
+    createBulkBills,
     getAllBills,
     getBillById,
     getBillStats,

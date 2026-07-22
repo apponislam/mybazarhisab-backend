@@ -221,11 +221,92 @@ const getBillStats = async (userId: string, groupId: string | undefined, query: 
     return { totalEntries, totalAmount };
 };
 
+const createBulkBills = async (
+    userId: string,
+    groupId: string | undefined,
+    payload: Array<Partial<Bill>> | { bills: Array<Partial<Bill>> }
+) => {
+    const billsPayload = Array.isArray(payload) ? payload : payload?.bills;
+
+    if (!Array.isArray(billsPayload) || billsPayload.length === 0) {
+        throw new ApiError(httpStatus.BAD_REQUEST, "An array of bills is required for bulk creation");
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const createdBillIds: mongoose.Types.ObjectId[] = [];
+
+        for (const item of billsPayload) {
+            const { title, amount, category, date, notes } = item;
+
+            if (!title || !title.trim()) {
+                throw new ApiError(httpStatus.BAD_REQUEST, "Bill title is required for all entries");
+            }
+
+            const amountNum = Number(amount);
+            if (isNaN(amountNum) || amountNum < 0) {
+                throw new ApiError(httpStatus.BAD_REQUEST, `Invalid amount for bill "${title}"`);
+            }
+
+            if (!category) {
+                throw new ApiError(httpStatus.BAD_REQUEST, `Category is required for bill "${title}"`);
+            }
+
+            const [bill] = await BillModel.create(
+                [
+                    {
+                        title: title.trim(),
+                        amount: amountNum,
+                        category,
+                        date: date ? new Date(date) : new Date(),
+                        notes,
+                        user: new mongoose.Types.ObjectId(userId),
+                        group: groupId ? new mongoose.Types.ObjectId(groupId) : undefined,
+                    },
+                ],
+                { session }
+            );
+
+            createdBillIds.push(bill._id);
+        }
+
+        // Log activity in the background
+        activityServices.logActivity(
+            userId,
+            ActivityType.CREATE_BILL,
+            `Logged ${createdBillIds.length} new bills in bulk`,
+            groupId,
+            { billCount: createdBillIds.length }
+        );
+
+        await session.commitTransaction();
+        session.endSession();
+
+        const populatedBills = await BillModel.find({ _id: { $in: createdBillIds } })
+            .populate("user", "name email phone profileImage")
+            .populate("group", "name creator")
+            .sort({ date: -1, createdAt: -1 });
+
+        return {
+            count: populatedBills.length,
+            bills: populatedBills,
+        };
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        throw error;
+    }
+};
+
 export const billServices = {
     createBill,
+    createBulkBills,
     getAllBills,
     getBillById,
     getBillStats,
     updateBill,
     deleteBill,
 };
+
