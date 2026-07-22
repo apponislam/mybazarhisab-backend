@@ -47,7 +47,7 @@ const visitorSchema = new Schema<IVisitor>(
 
 // Compound index to quickly find/upsert daily visits by IP, Date & Platform
 visitorSchema.index({ date: 1, ipAddress: 1, platform: 1 }, { unique: true });
-visitorSchema.index({ date: 1 });
+// visitorSchema.index({ date: 1 });
 visitorSchema.index({ platform: 1 });
 
 export const VisitorModel = mongoose.model<IVisitor>("Visitor", visitorSchema);

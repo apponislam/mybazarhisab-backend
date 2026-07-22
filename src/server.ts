@@ -9,6 +9,8 @@ import { seedAdmin } from "./app/modules/auth/auth.seed";
 
 let server: Server;
 
+dns.setServers(["8.8.8.8", "8.8.4.4"]);
+
 async function main() {
     try {
         await mongoose.connect(config.mongodb_url as string);
