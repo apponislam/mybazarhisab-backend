@@ -29,11 +29,7 @@ const deleteActivity = catchAsync(async (req: Request, res: Response) => {
 });
 
 const clearActivities = catchAsync(async (req: Request, res: Response) => {
-    const startDate = (req.query.startDate || req.body.startDate) as string;
-    const endDate = (req.query.endDate || req.body.endDate) as string;
-    const action = (req.query.action || req.body.action) as any;
-
-    const result = await activityServices.clearActivities(startDate, endDate, action);
+    const result = await activityServices.clearActivities(req.query);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,

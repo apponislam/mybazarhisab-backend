@@ -35,3 +35,4 @@ export interface Activity {
     createdAt: Date;
     updatedAt: Date;
 }
+
