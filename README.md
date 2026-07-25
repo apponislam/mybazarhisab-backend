@@ -61,6 +61,165 @@
 
 ---
 
+## 🗃️ Database Schemas & Relationships
+
+The database is built on **MongoDB** utilizing **Mongoose** object modeling. Here is a visual overview of all collection relationships:
+
+```mermaid
+erDiagram
+    User {
+        ObjectId id PK
+        string name
+        string email UK
+        string password
+        string role
+        string phone
+        string profileImage
+        string language
+        object address
+        string aboutme
+        boolean isActive
+        boolean isEmailVerified
+        boolean isDeleted
+        date lastLogin
+        ObjectId groupId FK
+    }
+
+    Group {
+        ObjectId id PK
+        string name
+        ObjectId creator FK
+        ObjectIdArray members FK
+        string inviteCode UK
+        boolean isDeleted
+    }
+
+    Product {
+        ObjectId id PK
+        string name
+        string photo
+        boolean is18Plus
+        string description
+        ObjectId user FK
+        boolean isEdited
+        ObjectId updatedBy FK
+        boolean isActive
+        boolean isDeleted
+    }
+
+    BazarEntry {
+        ObjectId id PK
+        ObjectId product FK
+        number price
+        number quantity
+        string unit
+        date date
+        string notes
+        ObjectId user FK
+        ObjectId group FK
+        boolean isDeleted
+    }
+
+    Bill {
+        ObjectId id PK
+        ObjectId user FK
+        ObjectId group FK
+        string category
+        string title
+        number amount
+        date date
+        string notes
+        boolean isDeleted
+    }
+
+    Activity {
+        ObjectId id PK
+        ObjectId user FK
+        ObjectId group FK
+        string action
+        string details
+        mixed metadata
+        boolean isDeleted
+    }
+
+    Review {
+        ObjectId id PK
+        ObjectId user FK
+        number rating
+        string comment
+        boolean isPublic
+        boolean isDeleted
+    }
+
+    Contact {
+        ObjectId id PK
+        string name
+        string email
+        string subject
+        string message
+        boolean isRead
+        boolean isReplied
+        string replyMessage
+        ObjectId repliedBy FK
+        boolean isDeleted
+    }
+
+    Policy {
+        ObjectId id PK
+        string title
+        string type UK
+        string content
+        string version
+        boolean isPublished
+        ObjectId updatedBy FK
+    }
+
+    Visitor {
+        ObjectId id PK
+        string ipAddress
+        ObjectId userId FK
+        string userAgent
+        string platform
+        string path
+        string date
+        number count
+        date lastVisitedAt
+    }
+
+    User }o--o| Group : "belongs to (groupId)"
+    Group ||--|| User : "created by (creator)"
+    Group ||--o{ User : "has members"
+    Product ||--|| User : "created by (user)"
+    Product }o--o| User : "updated by (updatedBy)"
+    BazarEntry ||--|| Product : "references (product)"
+    BazarEntry ||--|| User : "created by (user)"
+    BazarEntry }o--o| Group : "belongs to (group)"
+    Bill ||--|| User : "created by (user)"
+    Bill }o--o| Group : "belongs to (group)"
+    Activity ||--|| User : "logged for (user)"
+    Activity }o--o| Group : "related to (group)"
+    Review ||--|| User : "written by (user)"
+    Contact }o--o| User : "replied by (repliedBy)"
+    Policy }o--o| User : "updated by (updatedBy)"
+    Visitor }o--o| User : "visited by (userId)"
+```
+
+### Collection Schemas Summary
+
+1. **User** (`auth.model.ts`): Stores user account details, preferences, addresses, authentication states, and their associated `groupId`.
+2. **Group** (`group.model.ts`): Coordinates household roommates/partners with unique `inviteCode`s.
+3. **Product** (`product.model.ts`): Holds product catalog names and descriptive text.
+4. **BazarEntry** (`bazar-entry.model.ts`): Tracks unit, quantity, and price for a grocery purchase.
+5. **Bill** (`bill.model.ts`): Logs utility bills such as WiFi, Rent, and Electricity categorized dynamically.
+6. **Activity** (`activity.model.ts`): Contains system logs detailing user and admin operations.
+7. **Review** (`review.model.ts`): Captures rating feedback submitted by users.
+8. **Contact** (`contact.model.ts`): Form submissions with support queries and replies.
+9. **Policy** (`policy.model.ts`): Dynamic website policies (terms and privacy guidelines).
+10. **Faq** (`faq.model.ts`): Managed frequently asked questions.
+11. **Visitor** (`visitor.model.ts`): Logs unique traffic counts by IP address and platform.
+
+---
+
 ## 📂 Project Structure
 
 ```text
@@ -78,6 +237,7 @@ src/
 │   │   ├── activity/       # Admin audit logs
 │   │   ├── contact/        # Contact forms & replies
 │   │   └── feedback/       # Star reviews & testimonials
+│   └── routes/             # Unified route registry index
 │   └── routes/             # Unified route registry index
 ├── errors/                 # Global ApiError utilities
 ├── utils/                  # Nodemailer, email templates, response structures
@@ -179,28 +339,34 @@ src/
    ```
 3. Set up environment variables inside `.env` (refer to `.env.example`):
    ```ini
+   NODE_ENV=development
    PORT=5000
-   DATABASE_URL=mongodb://localhost:27017/bazarhisab
+   MONGODB_URL=mongodb://localhost:27017/bazarhisab
    BCRYPT_SALT_ROUNDS=12
+   CLIENT_URL=http://localhost:3000
    JWT_ACCESS_SECRET=your_access_secret_key
    JWT_ACCESS_EXPIRE=30d
    JWT_REFRESH_SECRET=your_refresh_secret_key
    JWT_REFRESH_EXPIRE=365d
+   JWT_PASSWORD_RESET_SECRET=your_password_reset_secret_key
    SMTP_HOST=smtp.mailtrap.io
    SMTP_PORT=2525
+   SMTP_SECURE=false
    SMTP_USER=your_smtp_username
    SMTP_PASS=your_smtp_password
-   SMTP_SENDER=Bazar Hisab <no-reply@bazarhisab.com>
-   CLIENT_URL=http://localhost:3000
+   SUPERADMINEMAIL=admin@bazarhisab.com
+   SUPERADMINPASSWORD=adminpassword123
    ```
-4. Build the typescript compiler:
-   ```bash
-   npm run build
-   ```
-5. Spin up the local development hot-reload server:
-   ```bash
-   npm run dev
-   ```
+4. Run the application:
+   - **For Development** (with hot-reloading using `ts-node-dev`, no build required):
+     ```bash
+     npm run dev
+     ```
+   - **For Production** (compile TypeScript and start the Node process):
+     ```bash
+     npm run build
+     npm start
+     ```
 
 ---
 
