@@ -267,6 +267,12 @@ const getBazarEntryStats = async (userId: string, groupId: string | undefined, q
         filter.date = {};
         if (startDate) filter.date.$gte = new Date(startDate);
         if (endDate) filter.date.$lte = new Date(endDate);
+    } else {
+        // Default: current month
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        filter.date = { $gte: firstDay, $lte: lastDay };
     }
 
     // Get all matching entries
