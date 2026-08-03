@@ -109,39 +109,6 @@ export const parseActionOrTypeFilter = (
     return { $in: typesArray };
 };
 
-const getNotificationMeta = (action: ActivityType): { title: string; type: "BAZAR" | "BILL" | "GROUP" | "SYSTEM" } => {
-    switch (action) {
-        case ActivityType.CREATE_BAZAR_ENTRY:
-            return { title: "New Bazar Entry", type: "BAZAR" };
-        case ActivityType.UPDATE_BAZAR_ENTRY:
-            return { title: "Bazar Entry Updated", type: "BAZAR" };
-        case ActivityType.DELETE_BAZAR_ENTRY:
-            return { title: "Bazar Entry Deleted", type: "BAZAR" };
-        case ActivityType.CREATE_BILL:
-            return { title: "New Bill Logged", type: "BILL" };
-        case ActivityType.UPDATE_BILL:
-            return { title: "Bill Updated", type: "BILL" };
-        case ActivityType.DELETE_BILL:
-            return { title: "Bill Deleted", type: "BILL" };
-        case ActivityType.CREATE_GROUP:
-            return { title: "New Group Created", type: "GROUP" };
-        case ActivityType.JOIN_GROUP:
-            return { title: "Member Joined Group", type: "GROUP" };
-        case ActivityType.LEAVE_GROUP:
-            return { title: "Member Left Group", type: "GROUP" };
-        case ActivityType.UPDATE_GROUP:
-            return { title: "Group Details Updated", type: "GROUP" };
-        case ActivityType.CREATE_PRODUCT:
-            return { title: "New Product Added", type: "BAZAR" };
-        case ActivityType.UPDATE_PRODUCT:
-            return { title: "Product Updated", type: "BAZAR" };
-        case ActivityType.DELETE_PRODUCT:
-            return { title: "Product Deleted", type: "BAZAR" };
-        default:
-            return { title: "Group Activity Alert", type: "SYSTEM" };
-    }
-};
-
 const logActivity = (
     userId: any,
     action: ActivityType,
@@ -173,22 +140,6 @@ const logActivity = (
         ActivityModel.create(activityData).catch((err) => {
             console.error("Failed to log activity in background:", err);
         });
-
-        // Trigger Notification creation if groupId is provided
-        if (groupId && mongoose.Types.ObjectId.isValid(groupId)) {
-            const { title: notifTitle, type: notifType } = getNotificationMeta(action);
-            NotificationModel.create({
-                sender: new mongoose.Types.ObjectId(userId),
-                group: new mongoose.Types.ObjectId(groupId),
-                title: notifTitle,
-                message: details,
-                type: notifType,
-                readBy: [],
-                deletedBy: [],
-            }).catch((err) => {
-                console.error("Failed to create notification in background:", err);
-            });
-        }
     } catch (error) {
         console.error("Failed to initiate activity logging in background:", error);
     }

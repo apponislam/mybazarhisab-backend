@@ -5,6 +5,8 @@ import { Bill } from "./bill.interface";
 import { BillModel } from "./bill.model";
 import { activityServices } from "../activity/activity.services";
 import { ActivityType } from "../activity/activity.interface";
+import { notificationServices } from "../notification/notification.services";
+import { UserModel } from "../auth/auth.model";
 
 const createBill = async (userId: string, groupId: string | undefined, data: Partial<Bill>) => {
     const bill = await BillModel.create({
@@ -16,7 +18,22 @@ const createBill = async (userId: string, groupId: string | undefined, data: Par
     // Log activity in the background
     activityServices.logActivity(userId, ActivityType.CREATE_BILL, `Logged a new ${bill.category.toLowerCase()} bill: "${bill.title}" (৳${bill.amount})`, groupId, { billId: bill._id });
 
-    return await BillModel.findById(bill._id).populate("user", "name email phone profileImage").populate("group", "name creator");
+    const populatedBill = await BillModel.findById(bill._id).populate("user", "name email phone profileImage").populate("group", "name creator");
+
+    // Trigger Notification
+    if (groupId) {
+        notificationServices.pushNotification({
+            senderId: userId,
+            groupId,
+            title: "New Bill Logged",
+            message: `${(populatedBill?.user as any)?.name || "Someone"} logged a new ${bill.category?.toLowerCase() || "utility"} bill: "${bill.title}" (৳${bill.amount})`,
+            type: "BILL",
+        }).catch((err) => {
+            console.error("Failed to push notification for bill creation:", err);
+        });
+    }
+
+    return populatedBill;
 };
 
 const getAllBills = async (userId: string, groupId: string | undefined, query: { category?: string; filter?: string; startDate?: string; endDate?: string; page?: string; limit?: string }) => {
@@ -113,6 +130,23 @@ const updateBill = async (userId: string, groupId: string | undefined, id: strin
     // Log activity in the background
     activityServices.logActivity(userId, ActivityType.UPDATE_BILL, `Updated bill: "${bill.title}"`, groupId, { billId: bill._id });
 
+    // Trigger Notification
+    if (groupId) {
+        UserModel.findById(userId).then(actor => {
+            if (actor) {
+                notificationServices.pushNotification({
+                    senderId: userId,
+                    groupId,
+                    title: "Bill Updated",
+                    message: `${actor.name} updated the ${bill.category?.toLowerCase() || "utility"} bill: "${bill.title}"`,
+                    type: "BILL",
+                });
+            }
+        }).catch((err) => {
+            console.error("Failed to push notification for bill update:", err);
+        });
+    }
+
     return bill;
 };
 
@@ -132,6 +166,23 @@ const deleteBill = async (userId: string, groupId: string | undefined, id: strin
 
     // Log activity in the background
     activityServices.logActivity(userId, ActivityType.DELETE_BILL, `Deleted bill: "${bill.title}" (৳${bill.amount})`, groupId, { billId: bill._id });
+
+    // Trigger Notification
+    if (groupId) {
+        UserModel.findById(userId).then(actor => {
+            if (actor) {
+                notificationServices.pushNotification({
+                    senderId: userId,
+                    groupId,
+                    title: "Bill Deleted",
+                    message: `${actor.name} deleted the ${bill.category?.toLowerCase() || "utility"} bill: "${bill.title}"`,
+                    type: "BILL",
+                });
+            }
+        }).catch((err) => {
+            console.error("Failed to push notification for bill deletion:", err);
+        });
+    }
 
     return bill;
 };

@@ -98,6 +98,29 @@ const getUnreadCount = async (userId: string, groupId: string | undefined) => {
     return { unreadCount };
 };
 
+const pushNotification = async (payload: {
+    senderId: string;
+    groupId: string;
+    title: string;
+    message: string;
+    type: "BAZAR" | "BILL" | "GROUP" | "SYSTEM";
+}) => {
+    try {
+        const notification = await NotificationModel.create({
+            sender: new mongoose.Types.ObjectId(payload.senderId),
+            group: new mongoose.Types.ObjectId(payload.groupId),
+            title: payload.title,
+            message: payload.message,
+            type: payload.type,
+            readBy: [],
+            deletedBy: [],
+        });
+        return notification;
+    } catch (error) {
+        console.error("Failed to create group notification:", error);
+    }
+};
+
 export const notificationServices = {
     getMyNotifications,
     markAsRead,
@@ -105,4 +128,5 @@ export const notificationServices = {
     deleteNotification,
     deleteAllNotifications,
     getUnreadCount,
+    pushNotification,
 };

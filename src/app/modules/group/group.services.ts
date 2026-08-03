@@ -6,6 +6,7 @@ import { UserModel } from "../auth/auth.model";
 import { GroupModel } from "./group.model";
 import { activityServices } from "../activity/activity.services";
 import { ActivityType } from "../activity/activity.interface";
+import { notificationServices } from "../notification/notification.services";
 
 const createGroup = async (userId: string, name: string) => {
     const session = await mongoose.startSession();
@@ -105,6 +106,17 @@ const joinGroup = async (userId: string, inviteCode: string) => {
             { groupId: group._id }
         );
 
+        // Trigger Notification
+        notificationServices.pushNotification({
+            senderId: userId,
+            groupId: group._id.toString(),
+            title: "Member Joined Group",
+            message: `${user.name} joined the group "${group.name}"`,
+            type: "GROUP",
+        }).catch((err) => {
+            console.error("Failed to push notification for group join:", err);
+        });
+
         await session.commitTransaction();
         session.endSession();
 
@@ -166,6 +178,17 @@ const leaveGroup = async (userId: string) => {
             group._id.toString(),
             { groupId: group._id }
         );
+
+        // Trigger Notification
+        notificationServices.pushNotification({
+            senderId: userId,
+            groupId: group._id.toString(),
+            title: "Member Left Group",
+            message: `${user.name} left the group "${group.name}"`,
+            type: "GROUP",
+        }).catch((err) => {
+            console.error("Failed to push notification for group leave:", err);
+        });
 
         await session.commitTransaction();
         session.endSession();

@@ -6,6 +6,8 @@ import { BazarEntryModel } from "./bazar-entry.model";
 import { BazarEntry, BazarUnit } from "./bazar-entry.interface";
 import { activityServices } from "../activity/activity.services";
 import { ActivityType } from "../activity/activity.interface";
+import { notificationServices } from "../notification/notification.services";
+import { UserModel } from "../auth/auth.model";
 
 const createBazarEntry = async (
     userId: string,
@@ -86,6 +88,20 @@ const createBazarEntry = async (
 
         // Populate product, creator user (with phone), and group details
         const populatedEntry = await BazarEntryModel.findById(entry._id).populate("product").populate("user", "name email phone profileImage").populate("group", "name creator");
+
+        // Trigger Notification creation in background if groupId is provided
+        if (groupId) {
+            notificationServices.pushNotification({
+                senderId: userId,
+                groupId,
+                title: "New Bazar Entry Added",
+                message: `${(populatedEntry?.user as any)?.name || "Someone"} added "${(populatedEntry?.product as any)?.name || "an item"}" (${quantity} ${unit || ""}) for ৳${priceNum * quantityNum}`,
+                type: "BAZAR",
+            }).catch((err) => {
+                console.error("Failed to push notification for bazar entry creation:", err);
+            });
+        }
+
         return populatedEntry;
     } catch (error) {
         await session.abortTransaction();
@@ -185,6 +201,21 @@ const updateBazarEntry = async (userId: string, groupId: string | undefined, id:
     const productName = (entry.product as any)?.name || "";
     activityServices.logActivity(userId, ActivityType.UPDATE_BAZAR_ENTRY, `Updated daily bazar entry for "${productName}"`, groupId, { entryId: entry._id });
 
+    // Trigger Notification
+    if (groupId) {
+        UserModel.findById(userId).then(actor => {
+            if (actor) {
+                notificationServices.pushNotification({
+                    senderId: userId,
+                    groupId,
+                    title: "Bazar Entry Updated",
+                    message: `${actor.name} updated the bazar entry for "${productName}"`,
+                    type: "BAZAR",
+                });
+            }
+        }).catch(err => console.error("Failed to push notification for bazar entry update:", err));
+    }
+
     return entry;
 };
 
@@ -205,6 +236,21 @@ const deleteBazarEntry = async (userId: string, groupId: string | undefined, id:
     // Log activity in the background
     const productName = (entry.product as any)?.name || "";
     activityServices.logActivity(userId, ActivityType.DELETE_BAZAR_ENTRY, `Deleted daily bazar entry for "${productName}"`, groupId, { entryId: entry._id });
+
+    // Trigger Notification
+    if (groupId) {
+        UserModel.findById(userId).then(actor => {
+            if (actor) {
+                notificationServices.pushNotification({
+                    senderId: userId,
+                    groupId,
+                    title: "Bazar Entry Deleted",
+                    message: `${actor.name} deleted the bazar entry for "${productName}"`,
+                    type: "BAZAR",
+                });
+            }
+        }).catch(err => console.error("Failed to push notification for bazar entry deletion:", err));
+    }
 
     return entry;
 };
