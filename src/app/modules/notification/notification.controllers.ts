@@ -70,10 +70,24 @@ const deleteAllNotifications = catchAsync(async (req: Request, res: Response) =>
     });
 });
 
+const getUnreadCount = catchAsync(async (req: Request, res: Response) => {
+    const userId = req.user._id;
+    const groupId = req.user.groupId?.toString();
+    const result = await notificationServices.getUnreadCount(userId, groupId);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Unread notification count retrieved successfully",
+        data: result,
+    });
+});
+
 export const notificationControllers = {
     getMyNotifications,
     markAsRead,
     markAllAsRead,
     deleteNotification,
     deleteAllNotifications,
+    getUnreadCount,
 };

@@ -5,6 +5,7 @@ import { notificationControllers } from "./notification.controllers";
 const router = Router();
 
 router.get("/", auth, notificationControllers.getMyNotifications);
+router.get("/unread-count", auth, notificationControllers.getUnreadCount);
 router.patch("/read-all", auth, notificationControllers.markAllAsRead);
 router.patch("/:id/read", auth, notificationControllers.markAsRead);
 router.delete("/", auth, notificationControllers.deleteAllNotifications);
