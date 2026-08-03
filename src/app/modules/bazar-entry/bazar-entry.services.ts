@@ -91,15 +91,17 @@ const createBazarEntry = async (
 
         // Trigger Notification creation in background if groupId is provided
         if (groupId) {
-            notificationServices.pushNotification({
-                senderId: userId,
-                groupId,
-                title: "New Bazar Entry Added",
-                message: `${(populatedEntry?.user as any)?.name || "Someone"} added "${(populatedEntry?.product as any)?.name || "an item"}" (${quantity} ${unit || ""}) for ৳${priceNum * quantityNum}`,
-                type: "BAZAR",
-            }).catch((err) => {
-                console.error("Failed to push notification for bazar entry creation:", err);
-            });
+            notificationServices
+                .pushNotification({
+                    senderId: userId,
+                    groupId,
+                    title: "New Bazar Entry Added",
+                    message: `${(populatedEntry?.user as any)?.name || "Someone"} added ${(populatedEntry?.product as any)?.name || "an item"} (${quantity} ${unit || ""}) costing ৳${priceNum * quantityNum} to the Bazar list.`,
+                    type: "BAZAR",
+                })
+                .catch((err) => {
+                    console.error("Failed to push notification for bazar entry creation:", err);
+                });
         }
 
         return populatedEntry;
@@ -200,20 +202,21 @@ const updateBazarEntry = async (userId: string, groupId: string | undefined, id:
     // Log activity in the background
     const productName = (entry.product as any)?.name || "";
     activityServices.logActivity(userId, ActivityType.UPDATE_BAZAR_ENTRY, `Updated daily bazar entry for "${productName}"`, groupId, { entryId: entry._id });
-
     // Trigger Notification
     if (groupId) {
-        UserModel.findById(userId).then(actor => {
-            if (actor) {
-                notificationServices.pushNotification({
-                    senderId: userId,
-                    groupId,
-                    title: "Bazar Entry Updated",
-                    message: `${actor.name} updated the bazar entry for "${productName}"`,
-                    type: "BAZAR",
-                });
-            }
-        }).catch(err => console.error("Failed to push notification for bazar entry update:", err));
+        UserModel.findById(userId)
+            .then((actor) => {
+                if (actor) {
+                    notificationServices.pushNotification({
+                        senderId: userId,
+                        groupId,
+                        title: "Bazar Entry Updated",
+                        message: `${actor.name} updated the Bazar entry for "${productName}".`,
+                        type: "BAZAR",
+                    });
+                }
+            })
+            .catch((err) => console.error("Failed to push notification for bazar entry update:", err));
     }
 
     return entry;
@@ -239,63 +242,23 @@ const deleteBazarEntry = async (userId: string, groupId: string | undefined, id:
 
     // Trigger Notification
     if (groupId) {
-        UserModel.findById(userId).then(actor => {
-            if (actor) {
-                notificationServices.pushNotification({
-                    senderId: userId,
-                    groupId,
-                    title: "Bazar Entry Deleted",
-                    message: `${actor.name} deleted the bazar entry for "${productName}"`,
-                    type: "BAZAR",
-                });
-            }
-        }).catch(err => console.error("Failed to push notification for bazar entry deletion:", err));
+        UserModel.findById(userId)
+            .then((actor) => {
+                if (actor) {
+                    notificationServices.pushNotification({
+                        senderId: userId,
+                        groupId,
+                        title: "Bazar Entry Removed",
+                        message: `${actor.name} removed "${productName}" from the Bazar list.`,
+                        type: "BAZAR",
+                    });
+                }
+            })
+            .catch((err) => console.error("Failed to push notification for bazar entry deletion:", err));
     }
 
     return entry;
 };
-
-// const getBazarEntryStats = async (userId: string, groupId: string | undefined, query: { filter?: string; startDate?: string; endDate?: string }) => {
-//     const { filter: dateFilter, startDate, endDate } = query;
-
-//     const filter: any = { isDeleted: false };
-//     if (groupId) {
-//         filter.group = groupId;
-//     } else {
-//         filter.user = userId;
-//     }
-
-//     if (dateFilter?.toUpperCase() === "ALL") {
-//         // No date filter
-//     } else if (startDate || endDate) {
-//         filter.date = {};
-//         if (startDate) filter.date.$gte = new Date(startDate);
-//         if (endDate) filter.date.$lte = new Date(endDate);
-//     }
-
-//     const totalEntries = await BazarEntryModel.countDocuments(filter);
-//     // DEBUG: log price & quantity of matched docs
-//     const debugEntries = await BazarEntryModel.find(filter).select("price quantity").lean();
-//     console.log("DEBUG: matched entries for totalAmount:", debugEntries);
-
-//     const totalAmountAggregation = await BazarEntryModel.aggregate([
-//         { $match: filter },
-//         {
-//             $group: {
-//                 _id: null,
-//                 totalAmount: {
-//                     $sum: {
-//                         $multiply: [{ $toDouble: "$price" }, { $toDouble: "$quantity" }],
-//                     },
-//                 },
-//             },
-//         },
-//     ]);
-
-//     const totalAmount = totalAmountAggregation[0]?.totalAmount || 0;
-
-//     return { totalEntries, totalAmount };
-// };
 
 const getBazarEntryStats = async (userId: string, groupId: string | undefined, query: { filter?: string; startDate?: string; endDate?: string }) => {
     const { filter: dateFilter, startDate, endDate } = query;
@@ -340,23 +303,27 @@ const getBazarEntryStats = async (userId: string, groupId: string | undefined, q
 const createBulkBazarEntries = async (
     userId: string,
     groupId: string | undefined,
-    payload: Array<{
-        productId?: string;
-        name: string;
-        price: number;
-        quantity?: number;
-        unit?: BazarUnit;
-        notes?: string;
-        date?: Date;
-    }> | { entries: Array<{
-        productId?: string;
-        name: string;
-        price: number;
-        quantity?: number;
-        unit?: BazarUnit;
-        notes?: string;
-        date?: Date;
-    }> }
+    payload:
+        | Array<{
+              productId?: string;
+              name: string;
+              price: number;
+              quantity?: number;
+              unit?: BazarUnit;
+              notes?: string;
+              date?: Date;
+          }>
+        | {
+              entries: Array<{
+                  productId?: string;
+                  name: string;
+                  price: number;
+                  quantity?: number;
+                  unit?: BazarUnit;
+                  notes?: string;
+                  date?: Date;
+              }>;
+          },
 ) => {
     const entriesPayload = Array.isArray(payload) ? payload : payload?.entries;
 
@@ -433,13 +400,7 @@ const createBulkBazarEntries = async (
         }
 
         // Log background activity summarizing bulk creation
-        activityServices.logActivity(
-            userId,
-            ActivityType.CREATE_BAZAR_ENTRY,
-            `Bulk created ${createdEntryIds.length} daily bazar entries`,
-            groupId,
-            { entryCount: createdEntryIds.length }
-        );
+        activityServices.logActivity(userId, ActivityType.CREATE_BAZAR_ENTRY, `Bulk created ${createdEntryIds.length} daily bazar entries`, groupId, { entryCount: createdEntryIds.length });
 
         await session.commitTransaction();
         session.endSession();
@@ -470,4 +431,3 @@ export const bazarEntryServices = {
     updateBazarEntry,
     deleteBazarEntry,
 };
-

@@ -22,15 +22,23 @@ const createBill = async (userId: string, groupId: string | undefined, data: Par
 
     // Trigger Notification
     if (groupId) {
-        notificationServices.pushNotification({
-            senderId: userId,
-            groupId,
-            title: "New Bill Logged",
-            message: `${(populatedBill?.user as any)?.name || "Someone"} logged a new ${bill.category?.toLowerCase() || "utility"} bill: "${bill.title}" (৳${bill.amount})`,
-            type: "BILL",
-        }).catch((err) => {
-            console.error("Failed to push notification for bill creation:", err);
-        });
+        const userName = (populatedBill?.user as any)?.name || "Someone";
+        const catLower = bill.category?.toLowerCase() || "utility";
+        const titleLower = bill.title?.toLowerCase() || "";
+        const isRedundant = titleLower.includes(catLower) || catLower.includes(titleLower);
+        const billDescription = isRedundant ? `${bill.title} bill` : `${catLower} bill for "${bill.title}"`;
+
+        notificationServices
+            .pushNotification({
+                senderId: userId,
+                groupId,
+                title: "New Bill Added",
+                message: `${userName} added a ${billDescription} of ৳${bill.amount}.`,
+                type: "BILL",
+            })
+            .catch((err) => {
+                console.error("Failed to push notification for bill creation:", err);
+            });
     }
 
     return populatedBill;
@@ -126,25 +134,26 @@ const updateBill = async (userId: string, groupId: string | undefined, id: strin
     if (!bill) {
         throw new ApiError(httpStatus.NOT_FOUND, "Bill entry not found or not authorized");
     }
-
     // Log activity in the background
     activityServices.logActivity(userId, ActivityType.UPDATE_BILL, `Updated bill: "${bill.title}"`, groupId, { billId: bill._id });
 
     // Trigger Notification
     if (groupId) {
-        UserModel.findById(userId).then(actor => {
-            if (actor) {
-                notificationServices.pushNotification({
-                    senderId: userId,
-                    groupId,
-                    title: "Bill Updated",
-                    message: `${actor.name} updated the ${bill.category?.toLowerCase() || "utility"} bill: "${bill.title}"`,
-                    type: "BILL",
-                });
-            }
-        }).catch((err) => {
-            console.error("Failed to push notification for bill update:", err);
-        });
+        UserModel.findById(userId)
+            .then((actor) => {
+                if (actor) {
+                    notificationServices.pushNotification({
+                        senderId: userId,
+                        groupId,
+                        title: "Bill Updated",
+                        message: `${actor.name} updated the bill details for "${bill.title}".`,
+                        type: "BILL",
+                    });
+                }
+            })
+            .catch((err) => {
+                console.error("Failed to push notification for bill update:", err);
+            });
     }
 
     return bill;
@@ -169,68 +178,25 @@ const deleteBill = async (userId: string, groupId: string | undefined, id: strin
 
     // Trigger Notification
     if (groupId) {
-        UserModel.findById(userId).then(actor => {
-            if (actor) {
-                notificationServices.pushNotification({
-                    senderId: userId,
-                    groupId,
-                    title: "Bill Deleted",
-                    message: `${actor.name} deleted the ${bill.category?.toLowerCase() || "utility"} bill: "${bill.title}"`,
-                    type: "BILL",
-                });
-            }
-        }).catch((err) => {
-            console.error("Failed to push notification for bill deletion:", err);
-        });
+        UserModel.findById(userId)
+            .then((actor) => {
+                if (actor) {
+                    notificationServices.pushNotification({
+                        senderId: userId,
+                        groupId,
+                        title: "Bill Removed",
+                        message: `${actor.name} removed the bill "${bill.title}" (৳${bill.amount}).`,
+                        type: "BILL",
+                    });
+                }
+            })
+            .catch((err) => {
+                console.error("Failed to push notification for bill deletion:", err);
+            });
     }
 
     return bill;
 };
-
-// const getBillStats = async (userId: string, groupId: string | undefined, query: { category?: string; filter?: string; startDate?: string; endDate?: string }) => {
-//     const { category, filter: dateFilter, startDate, endDate } = query;
-
-//     const filter: any = { isDeleted: false };
-//     if (groupId) {
-//         filter.group = groupId;
-//     } else {
-//         filter.user = userId;
-//     }
-
-//     if (category) {
-//         filter.category = category;
-//     }
-
-//     if (dateFilter?.toUpperCase() === "ALL") {
-//         // No date filter
-//     } else if (startDate || endDate) {
-//         filter.date = {};
-//         if (startDate) filter.date.$gte = new Date(startDate);
-//         if (endDate) filter.date.$lte = new Date(endDate);
-//     } else {
-//         // Default: current month
-//         const now = new Date();
-//         const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-//         const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-//         filter.date = { $gte: firstDay, $lte: lastDay };
-//     }
-
-//     const totalEntries = await BillModel.countDocuments(filter);
-
-//     const totalAmountAggregation = await BillModel.aggregate([
-//         { $match: filter },
-//         {
-//             $group: {
-//                 _id: null,
-//                 totalAmount: { $sum: "$amount" },
-//             },
-//         },
-//     ]);
-
-//     const totalAmount = totalAmountAggregation[0]?.totalAmount || 0;
-
-//     return { totalEntries, totalAmount };
-// };
 
 const getBillStats = async (userId: string, groupId: string | undefined, query: { category?: string; filter?: string; startDate?: string; endDate?: string }) => {
     const { category, filter: dateFilter, startDate, endDate } = query;
@@ -272,11 +238,7 @@ const getBillStats = async (userId: string, groupId: string | undefined, query: 
     return { totalEntries, totalAmount };
 };
 
-const createBulkBills = async (
-    userId: string,
-    groupId: string | undefined,
-    payload: Array<Partial<Bill>> | { bills: Array<Partial<Bill>> }
-) => {
+const createBulkBills = async (userId: string, groupId: string | undefined, payload: Array<Partial<Bill>> | { bills: Array<Partial<Bill>> }) => {
     const billsPayload = Array.isArray(payload) ? payload : payload?.bills;
 
     if (!Array.isArray(billsPayload) || billsPayload.length === 0) {
@@ -317,20 +279,14 @@ const createBulkBills = async (
                         group: groupId ? new mongoose.Types.ObjectId(groupId) : undefined,
                     },
                 ],
-                { session }
+                { session },
             );
 
             createdBillIds.push(bill._id);
         }
 
         // Log activity in the background
-        activityServices.logActivity(
-            userId,
-            ActivityType.CREATE_BILL,
-            `Logged ${createdBillIds.length} new bills in bulk`,
-            groupId,
-            { billCount: createdBillIds.length }
-        );
+        activityServices.logActivity(userId, ActivityType.CREATE_BILL, `Logged ${createdBillIds.length} new bills in bulk`, groupId, { billCount: createdBillIds.length });
 
         await session.commitTransaction();
         session.endSession();
@@ -360,4 +316,3 @@ export const billServices = {
     updateBill,
     deleteBill,
 };
-
