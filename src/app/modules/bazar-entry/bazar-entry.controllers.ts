@@ -92,6 +92,30 @@ const createBulkBazarEntries = catchAsync(async (req: Request, res: Response) =>
     });
 });
 
+const getAllBazarEntriesByAdmin = catchAsync(async (req: Request, res: Response) => {
+    const result = await bazarEntryServices.getAllBazarEntriesByAdmin(req.query);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Bazar entries retrieved successfully for admin",
+        meta: result.meta,
+        data: result.data,
+    });
+});
+
+const getBazarEntryByIdByAdmin = catchAsync(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const result = await bazarEntryServices.getBazarEntryByIdByAdmin(id as string);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Bazar entry retrieved successfully for admin",
+        data: result,
+    });
+});
+
 export const bazarEntryControllers = {
     createBazarEntry,
     createBulkBazarEntries,
@@ -100,5 +124,7 @@ export const bazarEntryControllers = {
     getBazarEntryStats,
     updateBazarEntry,
     deleteBazarEntry,
+    getAllBazarEntriesByAdmin,
+    getBazarEntryByIdByAdmin,
 };
 

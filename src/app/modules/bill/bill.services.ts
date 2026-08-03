@@ -307,6 +307,65 @@ const createBulkBills = async (userId: string, groupId: string | undefined, payl
     }
 };
 
+const getAllBillsByAdmin = async (query: { category?: string; filter?: string; startDate?: string; endDate?: string; page?: string; limit?: string; searchTerm?: string }) => {
+    const { category, filter: dateFilter, startDate, endDate, page = 1, limit = 10, searchTerm } = query;
+
+    const filter: any = { isDeleted: false };
+
+    if (category) {
+        filter.category = category;
+    }
+
+    if (searchTerm) {
+        filter.$or = [
+            { title: { $regex: searchTerm, $options: "i" } },
+            { notes: { $regex: searchTerm, $options: "i" } },
+        ];
+    }
+
+    if (dateFilter?.toUpperCase() === "ALL") {
+        // No date filter
+    } else if (startDate || endDate) {
+        filter.date = {};
+        if (startDate) filter.date.$gte = new Date(startDate);
+        if (endDate) filter.date.$lte = new Date(endDate);
+    }
+
+    const skip = (Number(page) - 1) * Number(limit);
+    const bills = await BillModel.find(filter)
+        .populate("user", "name email phone profileImage")
+        .populate("group", "name creator")
+        .sort({ date: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit));
+
+    const total = await BillModel.countDocuments(filter);
+
+    return {
+        meta: {
+            page: Number(page),
+            limit: Number(limit),
+            total,
+            totalPages: Math.ceil(total / Number(limit)),
+            hasNext: Number(page) * Number(limit) < total,
+            hasPrev: Number(page) > 1,
+        },
+        data: bills,
+    };
+};
+
+const getBillByIdByAdmin = async (id: string) => {
+    const bill = await BillModel.findOne({ _id: id, isDeleted: false })
+        .populate("user", "name email phone profileImage")
+        .populate("group", "name creator");
+
+    if (!bill) {
+        throw new ApiError(httpStatus.NOT_FOUND, "Bill entry not found");
+    }
+
+    return bill;
+};
+
 export const billServices = {
     createBill,
     createBulkBills,
@@ -315,4 +374,6 @@ export const billServices = {
     getBillStats,
     updateBill,
     deleteBill,
+    getAllBillsByAdmin,
+    getBillByIdByAdmin,
 };

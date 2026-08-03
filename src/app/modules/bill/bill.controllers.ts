@@ -92,6 +92,30 @@ const createBulkBills = catchAsync(async (req: Request, res: Response) => {
     });
 });
 
+const getAllBillsByAdmin = catchAsync(async (req: Request, res: Response) => {
+    const result = await billServices.getAllBillsByAdmin(req.query);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Bills retrieved successfully for admin",
+        meta: result.meta,
+        data: result.data,
+    });
+});
+
+const getBillByIdByAdmin = catchAsync(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const result = await billServices.getBillByIdByAdmin(id as string);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Bill retrieved successfully for admin",
+        data: result,
+    });
+});
+
 export const billControllers = {
     createBill,
     createBulkBills,
@@ -100,4 +124,6 @@ export const billControllers = {
     getBillStats,
     updateBill,
     deleteBill,
+    getAllBillsByAdmin,
+    getBillByIdByAdmin,
 };

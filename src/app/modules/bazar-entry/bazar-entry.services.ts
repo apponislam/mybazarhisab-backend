@@ -422,6 +422,65 @@ const createBulkBazarEntries = async (
     }
 };
 
+const getAllBazarEntriesByAdmin = async (query: { filter?: string; startDate?: string; endDate?: string; page?: string; limit?: string; searchTerm?: string }) => {
+    const { filter: dateFilter, startDate, endDate, page = 1, limit = 10, searchTerm } = query;
+
+    const filter: any = { isDeleted: false };
+
+    if (searchTerm) {
+        const matchingProducts = await ProductModel.find({ name: { $regex: searchTerm, $options: "i" } }).select("_id");
+        const productIds = matchingProducts.map(p => p._id);
+        filter.$or = [
+            { notes: { $regex: searchTerm, $options: "i" } },
+            { product: { $in: productIds } },
+        ];
+    }
+
+    if (dateFilter?.toUpperCase() === "ALL") {
+        // No date filter
+    } else if (startDate || endDate) {
+        filter.date = {};
+        if (startDate) filter.date.$gte = new Date(startDate);
+        if (endDate) filter.date.$lte = new Date(endDate);
+    }
+
+    const skip = (Number(page) - 1) * Number(limit);
+    const entries = await BazarEntryModel.find(filter)
+        .populate("product")
+        .populate("user", "name email phone profileImage")
+        .populate("group", "name creator")
+        .sort({ date: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit));
+
+    const total = await BazarEntryModel.countDocuments(filter);
+
+    return {
+        meta: {
+            page: Number(page),
+            limit: Number(limit),
+            total,
+            totalPages: Math.ceil(total / Number(limit)),
+            hasNext: Number(page) * Number(limit) < total,
+            hasPrev: Number(page) > 1,
+        },
+        data: entries,
+    };
+};
+
+const getBazarEntryByIdByAdmin = async (id: string) => {
+    const entry = await BazarEntryModel.findOne({ _id: id, isDeleted: false })
+        .populate("product")
+        .populate("user", "name email phone profileImage")
+        .populate("group", "name creator");
+
+    if (!entry) {
+        throw new ApiError(httpStatus.NOT_FOUND, "Bazar entry not found");
+    }
+
+    return entry;
+};
+
 export const bazarEntryServices = {
     createBazarEntry,
     createBulkBazarEntries,
@@ -430,4 +489,6 @@ export const bazarEntryServices = {
     getBazarEntryStats,
     updateBazarEntry,
     deleteBazarEntry,
+    getAllBazarEntriesByAdmin,
+    getBazarEntryByIdByAdmin,
 };
