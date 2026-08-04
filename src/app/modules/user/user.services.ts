@@ -105,6 +105,42 @@ const getUserProfileAndSummary = async (userId: string) => {
     const totalBazarSpent = bazarSpentAggregation.length > 0 ? bazarSpentAggregation[0].totalSpent : 0;
     const totalBillSpent = billSpentAggregation.length > 0 ? billSpentAggregation[0].totalSpent : 0;
 
+    let groupStats = null;
+
+    if (user.groupId) {
+        const groupObjId = (user.groupId as any)._id;
+
+        const [
+            groupTotalBazarEntries,
+            groupTotalBills,
+            groupBazarSpentAgg,
+            groupBillSpentAgg,
+        ] = await Promise.all([
+            BazarEntryModel.countDocuments({ group: groupObjId, isDeleted: false }),
+            BillModel.countDocuments({ group: groupObjId, isDeleted: false }),
+            BazarEntryModel.aggregate([
+                { $match: { group: groupObjId, isDeleted: false } },
+                { $group: { _id: null, totalSpent: { $sum: "$price" } } },
+            ]),
+            BillModel.aggregate([
+                { $match: { group: groupObjId, isDeleted: false } },
+                { $group: { _id: null, totalSpent: { $sum: "$amount" } } },
+            ]),
+        ]);
+
+        const groupTotalBazarSpent = groupBazarSpentAgg.length > 0 ? groupBazarSpentAgg[0].totalSpent : 0;
+        const groupTotalBillSpent = groupBillSpentAgg.length > 0 ? groupBillSpentAgg[0].totalSpent : 0;
+
+        groupStats = {
+            totalMembers: (user.groupId as any).members?.length || 0,
+            totalBazarEntries: groupTotalBazarEntries,
+            totalBills: groupTotalBills,
+            totalBazarSpent: groupTotalBazarSpent,
+            totalBillSpent: groupTotalBillSpent,
+            totalOverallSpent: groupTotalBazarSpent + groupTotalBillSpent,
+        };
+    }
+
     return {
         user,
         stats: {
@@ -117,7 +153,9 @@ const getUserProfileAndSummary = async (userId: string) => {
             totalBillSpent,
             totalOverallSpent: totalBazarSpent + totalBillSpent,
         },
+        groupStats,
     };
+
 };
 
 const getUserReviews = async (userId: string, query: { page?: string; limit?: string }) => {
