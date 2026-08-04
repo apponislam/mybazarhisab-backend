@@ -193,7 +193,51 @@ const getVisitorAnalytics = async (days = 30) => {
     };
 };
 
+const getAllVisitors = async (query: {
+    page?: string;
+    limit?: string;
+    platform?: string;
+    date?: string;
+    searchTerm?: string;
+}) => {
+    const { page = 1, limit = 10, platform, date, searchTerm } = query;
+    const filter: any = {};
+
+    if (platform) filter.platform = platform.toUpperCase();
+    if (date) filter.date = date;
+    if (searchTerm) {
+        filter.$or = [
+            { ipAddress: { $regex: searchTerm, $options: "i" } },
+            { userAgent: { $regex: searchTerm, $options: "i" } },
+            { path: { $regex: searchTerm, $options: "i" } },
+        ];
+    }
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const visitors = await VisitorModel.find(filter)
+        .populate("userId", "name email phone profileImage")
+        .sort({ lastVisitedAt: -1 })
+        .skip(skip)
+        .limit(Number(limit));
+
+    const total = await VisitorModel.countDocuments(filter);
+
+    return {
+        meta: {
+            page: Number(page),
+            limit: Number(limit),
+            total,
+            totalPages: Math.ceil(total / Number(limit)),
+            hasNext: Number(page) * Number(limit) < total,
+            hasPrev: Number(page) > 1,
+        },
+        data: visitors,
+    };
+};
+
 export const visitorServices = {
     recordVisit,
     getVisitorAnalytics,
+    getAllVisitors,
 };

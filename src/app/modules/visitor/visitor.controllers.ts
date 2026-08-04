@@ -50,7 +50,20 @@ const getVisitorStats = catchAsync(async (req: Request, res: Response) => {
     });
 });
 
+const getAllVisitors = catchAsync(async (req: Request, res: Response) => {
+    const result = await visitorServices.getAllVisitors(req.query);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Visitor records fetched successfully",
+        meta: result.meta,
+        data: result.data,
+    });
+});
+
 export const visitorControllers = {
     trackVisit,
     getVisitorStats,
+    getAllVisitors,
 };

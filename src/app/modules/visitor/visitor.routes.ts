@@ -10,5 +10,6 @@ router.post("/track", visitorControllers.trackVisit);
 
 // Admin-only Visitor Analytics
 router.get("/stats", auth, authorize(["ADMIN"]), visitorControllers.getVisitorStats);
+router.get("/all", auth, authorize(["ADMIN"]), visitorControllers.getAllVisitors);
 
 export const visitorRoutes = router;
