@@ -13,6 +13,7 @@ import { reviewRoutes } from "../modules/review/review.routes";
 import { faqRoutes } from "../modules/faq/faq.routes";
 import { visitorRoutes } from "../modules/visitor/visitor.routes";
 import { notificationRoutes } from "../modules/notification/notification.routes";
+import { userRoutes } from "../modules/user/user.routes";
 
 const router = express.Router();
 
@@ -20,6 +21,10 @@ const moduleRoutes = [
     {
         path: "/auth",
         route: authRoutes,
+    },
+    {
+        path: "/users",
+        route: userRoutes,
     },
     {
         path: "/products",
