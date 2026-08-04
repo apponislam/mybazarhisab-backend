@@ -12,7 +12,7 @@ import config from "./app/config";
 const app: Application = express();
 
 const corsOptions = {
-    origin: ["http://localhost:3000",],
+    origin: ["http://localhost:3000", "http://localhost:3001", "https://mybazarhisab-frontend-web.vercel.app", "http://mybazarhisab-frontend-web.vercel.app"],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
@@ -37,9 +37,7 @@ app.get("/", (req: Request, res: Response) => {
         const port = config.port || "5000";
         const formattedEnv = env.charAt(0).toUpperCase() + env.slice(1).toLowerCase();
 
-        const modifiedHtml = html
-            .replace("{{NODE_ENV}}", formattedEnv)
-            .replace("{{PORT}}", String(port));
+        const modifiedHtml = html.replace("{{NODE_ENV}}", formattedEnv).replace("{{PORT}}", String(port));
 
         res.send(modifiedHtml);
     });
@@ -51,4 +49,3 @@ app.use(notFound);
 app.use(globalErrorHandler);
 
 export default app;
-
