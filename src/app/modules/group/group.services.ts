@@ -294,6 +294,123 @@ const generateInviteCode = async (userId: string) => {
     return group;
 };
 
+const getAllGroupsAdmin = async (query: { searchTerm?: string; page?: string; limit?: string }) => {
+    const { searchTerm, page = 1, limit = 10 } = query;
+    const filter: any = { isDeleted: false };
+
+    if (searchTerm) {
+        filter.$or = [
+            { name: { $regex: searchTerm, $options: "i" } },
+            { inviteCode: { $regex: searchTerm, $options: "i" } },
+        ];
+    }
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const groups = await GroupModel.find(filter)
+        .populate("creator", "name email phone profileImage")
+        .populate("members", "name email phone profileImage")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit));
+
+    const total = await GroupModel.countDocuments(filter);
+
+    return {
+        meta: {
+            page: Number(page),
+            limit: Number(limit),
+            total,
+            totalPages: Math.ceil(total / Number(limit)),
+            hasNext: Number(page) * Number(limit) < total,
+            hasPrev: Number(page) > 1,
+        },
+        data: groups,
+    };
+};
+
+const getGroupByIdAdmin = async (id: string) => {
+    const group = await GroupModel.findOne({ _id: id, isDeleted: false })
+        .populate("creator", "name email phone profileImage")
+        .populate("members", "name email phone profileImage");
+
+    if (!group) {
+        throw new ApiError(httpStatus.NOT_FOUND, "Group not found");
+    }
+
+    return group;
+};
+
+const deleteGroupByAdmin = async (id: string) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const group = await GroupModel.findOne({ _id: id, isDeleted: false }).session(session);
+        if (!group) {
+            throw new ApiError(httpStatus.NOT_FOUND, "Group not found");
+        }
+
+        group.isDeleted = true;
+        await group.save({ session });
+
+        // Unlink all members from this group
+        await UserModel.updateMany(
+            { groupId: id },
+            { $unset: { groupId: "" } },
+            { session }
+        );
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return { message: "Group deleted successfully by admin" };
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        throw error;
+    }
+};
+
+const removeMemberByAdmin = async (groupId: string, userId: string) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const group = await GroupModel.findOne({ _id: groupId, isDeleted: false }).session(session);
+        if (!group) {
+            throw new ApiError(httpStatus.NOT_FOUND, "Group not found");
+        }
+
+        const user = await UserModel.findOne({ _id: userId, isDeleted: false }).session(session);
+        if (!user) {
+            throw new ApiError(httpStatus.NOT_FOUND, "User not found");
+        }
+
+        group.members = group.members.filter((m) => m.toString() !== userId);
+
+        if (group.members.length === 0) {
+            group.isDeleted = true;
+        } else if (group.creator.toString() === userId) {
+            group.creator = group.members[0];
+        }
+
+        await group.save({ session });
+
+        user.groupId = undefined;
+        await user.save({ session });
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return { message: "Member removed from group successfully" };
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        throw error;
+    }
+};
+
 export const groupServices = {
     createGroup,
     joinGroup,
@@ -301,4 +418,9 @@ export const groupServices = {
     getMyGroup,
     updateGroup,
     generateInviteCode,
+    getAllGroupsAdmin,
+    getGroupByIdAdmin,
+    deleteGroupByAdmin,
+    removeMemberByAdmin,
 };
+

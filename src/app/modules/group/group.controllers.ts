@@ -91,6 +91,54 @@ const generateInviteCode = catchAsync(async (req: Request, res: Response) => {
     });
 });
 
+const getAllGroupsAdmin = catchAsync(async (req: Request, res: Response) => {
+    const result = await groupServices.getAllGroupsAdmin(req.query);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Groups retrieved successfully for admin",
+        meta: result.meta,
+        data: result.data,
+    });
+});
+
+const getGroupByIdAdmin = catchAsync(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const result = await groupServices.getGroupByIdAdmin(id as string);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Group details retrieved successfully",
+        data: result,
+    });
+});
+
+const deleteGroupByAdmin = catchAsync(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const result = await groupServices.deleteGroupByAdmin(id as string);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: result.message,
+        data: null,
+    });
+});
+
+const removeMemberByAdmin = catchAsync(async (req: Request, res: Response) => {
+    const { groupId, userId } = req.params;
+    const result = await groupServices.removeMemberByAdmin(groupId as string, userId as string);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: result.message,
+        data: null,
+    });
+});
+
 export const groupControllers = {
     createGroup,
     joinGroup,
@@ -99,4 +147,9 @@ export const groupControllers = {
     checkGroupMembership,
     updateGroup,
     generateInviteCode,
+    getAllGroupsAdmin,
+    getGroupByIdAdmin,
+    deleteGroupByAdmin,
+    removeMemberByAdmin,
 };
+

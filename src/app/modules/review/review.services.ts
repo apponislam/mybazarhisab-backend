@@ -11,10 +11,7 @@ const createReview = async (userId: string, data: Partial<IReview>) => {
     });
 };
 
-const getAllReviews = async (
-    isAdmin: boolean,
-    query: { isPublic?: string; page?: string; limit?: string }
-) => {
+const getAllReviews = async (isAdmin: boolean, query: { isPublic?: string; page?: string; limit?: string }) => {
     const { isPublic, page = 1, limit = 10 } = query;
 
     const filter: any = { isDeleted: false };
@@ -26,11 +23,7 @@ const getAllReviews = async (
     }
 
     const skip = (Number(page) - 1) * Number(limit);
-    const reviews = await ReviewModel.find(filter)
-        .populate("user", "name email phone profileImage")
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(Number(limit));
+    const reviews = await ReviewModel.find(filter).populate("user", "name email phone profileImage").sort({ createdAt: -1 }).skip(skip).limit(Number(limit));
 
     const total = await ReviewModel.countDocuments(filter);
 
@@ -61,7 +54,7 @@ const getReviewSummaryStats = async () => {
         ratingBreakdown[roundedStar] = (ratingBreakdown[roundedStar] || 0) + 1;
     });
 
-    const averageRating = totalReviews > 0 ? Number((totalRatingSum / totalReviews).toFixed(1)) : 5.0;
+    const averageRating = totalReviews > 0 ? Number((totalRatingSum / totalReviews).toFixed(1)) : 0.0;
 
     return {
         averageRating,
@@ -88,11 +81,7 @@ const deleteReview = async (userId: string, isAdmin: boolean, id: string) => {
         filter.user = new mongoose.Types.ObjectId(userId);
     }
 
-    const review = await ReviewModel.findOneAndUpdate(
-        filter,
-        { $set: { isDeleted: true } },
-        { new: true }
-    );
+    const review = await ReviewModel.findOneAndUpdate(filter, { $set: { isDeleted: true } }, { new: true });
 
     if (!review) {
         throw new ApiError(httpStatus.NOT_FOUND, "Review not found or not authorized");
