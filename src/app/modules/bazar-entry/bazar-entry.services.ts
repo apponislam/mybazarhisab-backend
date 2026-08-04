@@ -429,11 +429,8 @@ const getAllBazarEntriesByAdmin = async (query: { filter?: string; startDate?: s
 
     if (searchTerm) {
         const matchingProducts = await ProductModel.find({ name: { $regex: searchTerm, $options: "i" } }).select("_id");
-        const productIds = matchingProducts.map(p => p._id);
-        filter.$or = [
-            { notes: { $regex: searchTerm, $options: "i" } },
-            { product: { $in: productIds } },
-        ];
+        const productIds = matchingProducts.map((p) => p._id);
+        filter.$or = [{ notes: { $regex: searchTerm, $options: "i" } }, { product: { $in: productIds } }];
     }
 
     if (dateFilter?.toUpperCase() === "ALL") {
@@ -445,13 +442,7 @@ const getAllBazarEntriesByAdmin = async (query: { filter?: string; startDate?: s
     }
 
     const skip = (Number(page) - 1) * Number(limit);
-    const entries = await BazarEntryModel.find(filter)
-        .populate("product")
-        .populate("user", "name email phone profileImage")
-        .populate("group", "name creator")
-        .sort({ date: -1, createdAt: -1 })
-        .skip(skip)
-        .limit(Number(limit));
+    const entries = await BazarEntryModel.find(filter).populate("product").populate("user", "name email phone profileImage").populate("group", "name creator").sort({ date: -1, createdAt: -1 }).skip(skip).limit(Number(limit));
 
     const total = await BazarEntryModel.countDocuments(filter);
 
@@ -469,10 +460,7 @@ const getAllBazarEntriesByAdmin = async (query: { filter?: string; startDate?: s
 };
 
 const getBazarEntryByIdByAdmin = async (id: string) => {
-    const entry = await BazarEntryModel.findOne({ _id: id, isDeleted: false })
-        .populate("product")
-        .populate("user", "name email phone profileImage")
-        .populate("group", "name creator");
+    const entry = await BazarEntryModel.findOne({ _id: id, isDeleted: false }).populate("product").populate("user", "name email phone profileImage").populate("group", "name creator");
 
     if (!entry) {
         throw new ApiError(httpStatus.NOT_FOUND, "Bazar entry not found");

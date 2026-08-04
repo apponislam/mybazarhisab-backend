@@ -7,6 +7,7 @@ const reviewSchema = new Schema<IReview>(
             type: Schema.Types.ObjectId,
             ref: "User",
             required: [true, "User ID is required"],
+            unique: true,
         },
         rating: {
             type: Number,
@@ -35,6 +36,6 @@ const reviewSchema = new Schema<IReview>(
 );
 
 reviewSchema.index({ isPublic: 1, isDeleted: 1, createdAt: -1 });
-reviewSchema.index({ user: 1, isDeleted: 1 });
+reviewSchema.index({ user: 1, isDeleted: 1 }, { unique: true });
 
 export const ReviewModel = mongoose.model<IReview>("Review", reviewSchema);

@@ -5,9 +5,24 @@ import { IReview } from "./review.interface";
 import { ReviewModel } from "./review.model";
 
 const createReview = async (userId: string, data: Partial<IReview>) => {
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+
+    const existingReview = await ReviewModel.findOne({
+        user: userObjectId,
+        isDeleted: false,
+    });
+
+    if (existingReview) {
+        // Second time / update: update comment only (preserve original rating)
+        existingReview.comment = data.comment || existingReview.comment;
+        await existingReview.save();
+        return existingReview;
+    }
+
+    // First time: create review with rating and comment
     return await ReviewModel.create({
         ...data,
-        user: new mongoose.Types.ObjectId(userId),
+        user: userObjectId,
     });
 };
 
