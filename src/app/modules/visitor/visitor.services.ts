@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { VisitorPlatform } from "./visitor.interface";
 import { VisitorModel } from "./visitor.model";
 
@@ -26,14 +27,14 @@ const recordVisit = async (payload: {
         },
     };
 
-    if (userId) {
-        updateDoc.$set.userId = userId;
+    if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+        updateDoc.$set.userId = new mongoose.Types.ObjectId(userId);
     }
 
     const visitor = await VisitorModel.findOneAndUpdate(
         { date: dateStr, ipAddress, platform: formattedPlatform },
         updateDoc,
-        { upsert: true, new: true, setDefaultsOnInsert: true }
+        { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: false }
     );
 
     return visitor;
