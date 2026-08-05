@@ -4,28 +4,35 @@ import config from "../../config";
 
 export const seedAdmin = async () => {
     try {
+        const { name, email, password, phone } = config.initialAdmin || {};
+
+        if (!email || !password || !name || !phone) {
+            console.log("⚠️ Initial admin configuration missing in environment variables, skipping admin seeding");
+            return;
+        }
+
         const adminExists = await UserModel.findOne({
             role: "ADMIN",
         });
 
         if (!adminExists) {
-            console.log("📝 No admin found, creating one...");
+            console.log("📝 No admin found, creating initial admin...");
 
-            const hashedPassword = await bcrypt.hash(config.superAdminPassword as string, Number(config.bcrypt_salt_rounds));
+            const hashedPassword = await bcrypt.hash(password, Number(config.bcrypt_salt_rounds));
 
             const admin = {
-                name: "Appon Islam",
-                email: config.superAdminEmail,
+                name,
+                email,
                 password: hashedPassword,
                 role: "ADMIN",
-                phone: "01722779803",
+                phone,
                 isActive: true,
                 isEmailVerified: true,
             };
 
             await UserModel.create(admin as any);
 
-            console.log("✅ Admin created:", config.superAdminEmail);
+            console.log("✅ Admin created:", email);
         } else {
             console.log("✅ Admin already exists, skipping creation");
         }

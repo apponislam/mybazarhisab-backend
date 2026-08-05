@@ -452,9 +452,10 @@ src/
    SMTP_PORT=2525
    SMTP_SECURE=false
    SMTP_USER=your_smtp_username
-   SMTP_PASS=your_smtp_password
-   SUPERADMINEMAIL=admin@bazarhisab.com
-   SUPERADMINPASSWORD=adminpassword123
+   INITIAL_ADMIN_NAME="Appon Islam"
+   INITIAL_ADMIN_EMAIL=admin@bazarhisab.com
+   INITIAL_ADMIN_PASSWORD=adminpassword123
+   INITIAL_ADMIN_PHONE=+8801700000000
    ```
 4. Run the application:
    - **For Development** (with hot-reloading using `ts-node-dev`, no build required):
