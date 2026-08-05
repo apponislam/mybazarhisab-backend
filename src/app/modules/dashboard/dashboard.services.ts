@@ -513,6 +513,8 @@ const getStatementHtml = async (userId: string, groupId: string | undefined, que
     });
 };
 
+const dynamicImport = (specifier: string) => new Function("specifier", "return import(specifier)")(specifier);
+
 const getStatementPdf = async (userId: string, groupId: string | undefined, query: { startDate?: string; endDate?: string; year?: string }): Promise<Buffer> => {
     // 1. Generate dynamic HTML using the existing helper
     const htmlContent = await getStatementHtml(userId, groupId, query);
@@ -521,8 +523,12 @@ const getStatementPdf = async (userId: string, groupId: string | undefined, quer
     let browser;
     if (process.env.NODE_ENV === "production" || process.env.VERCEL) {
         try {
-            const puppeteerCore = (await import("puppeteer-core")).default;
-            const chromium = (await import("@sparticuz/chromium-min")).default;
+            const puppeteerCoreMod = await dynamicImport("puppeteer-core");
+            const puppeteerCore = puppeteerCoreMod.default || puppeteerCoreMod;
+
+            const chromiumMod = await dynamicImport("@sparticuz/chromium-min");
+            const chromium = chromiumMod.default || chromiumMod;
+
             const execPath = await chromium.executablePath();
             browser = await puppeteerCore.launch({
                 args: chromium.args,
@@ -534,11 +540,17 @@ const getStatementPdf = async (userId: string, groupId: string | undefined, quer
             throw err;
         }
     } else {
-                const puppeteer = (await import("puppeteer")).default;
-        browser = await puppeteer.launch({
-            headless: true,
-            args: ["--no-sandbox", "--disable-setuid-sandbox"],
-        });
+        try {
+            const puppeteerMod = await dynamicImport("puppeteer");
+            const puppeteer = puppeteerMod.default || puppeteerMod;
+            browser = await puppeteer.launch({
+                headless: true,
+                args: ["--no-sandbox", "--disable-setuid-sandbox"],
+            });
+        } catch (err) {
+            console.error("Puppeteer local launch failed:", err);
+            throw err;
+        }
     }
 
     try {
