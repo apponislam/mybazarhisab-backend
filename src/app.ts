@@ -12,7 +12,7 @@ import config from "./app/config";
 const app: Application = express();
 
 const corsOptions = {
-    origin: ["http://localhost:3000", "http://localhost:3001", "https://mybazarhisab-frontend-web.vercel.app", "http://mybazarhisab-frontend-web.vercel.app"],
+    origin: ["http://localhost:3000", "http://localhost:3001", "https://mybazarhisab-frontend-web.vercel.app", "http://mybazarhisab-frontend-web.vercel.app", "https://mybazarhisab.apponislam.top", "http://mybazarhisab.apponislam.top"],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
