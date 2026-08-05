@@ -34,7 +34,7 @@ const recordVisit = async (payload: {
     const visitor = await VisitorModel.findOneAndUpdate(
         { date: dateStr, ipAddress, platform: formattedPlatform },
         updateDoc,
-        { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: false }
+        { upsert: true, returnDocument: "after", setDefaultsOnInsert: true, runValidators: false }
     );
 
     return visitor;

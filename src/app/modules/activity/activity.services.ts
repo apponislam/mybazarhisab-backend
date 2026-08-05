@@ -210,7 +210,7 @@ const deleteActivity = async (activityId: string) => {
     const activity = await ActivityModel.findOneAndUpdate(
         { _id: activityId, isDeleted: false },
         { $set: { isDeleted: true } },
-        { new: true }
+        { returnDocument: "after" }
     );
 
     if (!activity) {

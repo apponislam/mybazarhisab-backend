@@ -111,7 +111,7 @@ const updateProduct = async (userId: string, groupId: string | undefined, produc
                 updatedBy: new mongoose.Types.ObjectId(userId)
             }
         },
-        { new: true, runValidators: true }
+        { returnDocument: "after", runValidators: true }
     )
     .populate("user", "name email phone profileImage")
     .populate("updatedBy", "name email phone profileImage");
@@ -136,7 +136,7 @@ const deleteProduct = async (userId: string, groupId: string | undefined, produc
     const product = await ProductModel.findOneAndUpdate(
         { _id: productId, isDeleted: false },
         { $set: { isDeleted: true } },
-        { new: true }
+        { returnDocument: "after" }
     )
     .populate("user", "name email phone profileImage")
     .populate("updatedBy", "name email phone profileImage");

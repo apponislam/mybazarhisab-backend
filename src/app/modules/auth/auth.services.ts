@@ -431,7 +431,7 @@ const setUserPassword = async (userId: string, newPassword: string) => {
 
 
 const deleteUser = async (userId: string) => {
-    const user = await UserModel.findByIdAndUpdate(userId, { $set: { isDeleted: true } }, { new: true });
+    const user = await UserModel.findByIdAndUpdate(userId, { $set: { isDeleted: true } }, { returnDocument: "after" });
     if (!user) throw new ApiError(httpStatus.NOT_FOUND, "User not found");
 
     // Log activity in the background

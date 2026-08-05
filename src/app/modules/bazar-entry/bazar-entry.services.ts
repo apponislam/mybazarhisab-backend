@@ -193,7 +193,7 @@ const updateBazarEntry = async (userId: string, groupId: string | undefined, id:
         filter.user = userId;
     }
 
-    const entry = await BazarEntryModel.findOneAndUpdate(filter, { $set: data }, { new: true, runValidators: true }).populate("product").populate("user", "name email phone profileImage").populate("group", "name creator");
+    const entry = await BazarEntryModel.findOneAndUpdate(filter, { $set: data }, { returnDocument: "after", runValidators: true }).populate("product").populate("user", "name email phone profileImage").populate("group", "name creator");
 
     if (!entry) {
         throw new ApiError(httpStatus.NOT_FOUND, "Bazar entry not found or not authorized");
@@ -230,7 +230,7 @@ const deleteBazarEntry = async (userId: string, groupId: string | undefined, id:
         filter.user = userId;
     }
 
-    const entry = await BazarEntryModel.findOneAndUpdate(filter, { $set: { isDeleted: true } }, { new: true }).populate("product");
+    const entry = await BazarEntryModel.findOneAndUpdate(filter, { $set: { isDeleted: true } }, { returnDocument: "after" }).populate("product");
 
     if (!entry) {
         throw new ApiError(httpStatus.NOT_FOUND, "Bazar entry not found or not authorized");

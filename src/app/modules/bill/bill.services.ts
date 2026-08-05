@@ -129,7 +129,7 @@ const updateBill = async (userId: string, groupId: string | undefined, id: strin
         filter.user = userId;
     }
 
-    const bill = await BillModel.findOneAndUpdate(filter, { $set: data }, { new: true, runValidators: true }).populate("user", "name email phone profileImage").populate("group", "name creator");
+    const bill = await BillModel.findOneAndUpdate(filter, { $set: data }, { returnDocument: "after", runValidators: true }).populate("user", "name email phone profileImage").populate("group", "name creator");
 
     if (!bill) {
         throw new ApiError(httpStatus.NOT_FOUND, "Bill entry not found or not authorized");
@@ -167,7 +167,7 @@ const deleteBill = async (userId: string, groupId: string | undefined, id: strin
         filter.user = userId;
     }
 
-    const bill = await BillModel.findOneAndUpdate(filter, { $set: { isDeleted: true } }, { new: true });
+    const bill = await BillModel.findOneAndUpdate(filter, { $set: { isDeleted: true } }, { returnDocument: "after" });
 
     if (!bill) {
         throw new ApiError(httpStatus.NOT_FOUND, "Bill entry not found or not authorized");

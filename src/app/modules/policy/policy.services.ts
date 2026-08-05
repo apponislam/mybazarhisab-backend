@@ -104,7 +104,7 @@ const upsertPolicy = async (
                 updatedBy: new Types.ObjectId(userId),
             },
         },
-        { new: true, upsert: true, runValidators: true }
+        { returnDocument: "after", upsert: true, runValidators: true }
     );
 
     return policy;

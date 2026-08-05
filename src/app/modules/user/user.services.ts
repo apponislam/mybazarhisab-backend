@@ -291,7 +291,7 @@ const updateUserStatus = async (userId: string, isActive: boolean) => {
     const user = await UserModel.findOneAndUpdate(
         { _id: userId, isDeleted: false },
         { $set: { isActive } },
-        { new: true }
+        { returnDocument: "after" }
     );
 
     if (!user) {
@@ -309,7 +309,7 @@ const updateUserRole = async (userId: string, role: "ADMIN" | "USER") => {
     const user = await UserModel.findOneAndUpdate(
         { _id: userId, isDeleted: false },
         { $set: { role } },
-        { new: true }
+        { returnDocument: "after" }
     );
 
     if (!user) {

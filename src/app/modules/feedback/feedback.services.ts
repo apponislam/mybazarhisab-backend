@@ -70,7 +70,7 @@ const deleteFeedback = async (userId: string, isAdmin: boolean, id: string) => {
     const feedback = await FeedbackModel.findOneAndUpdate(
         filter,
         { $set: { isDeleted: true } },
-        { new: true }
+        { returnDocument: "after" }
     );
 
     if (!feedback) {

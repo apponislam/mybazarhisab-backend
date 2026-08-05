@@ -63,7 +63,7 @@ const getMessageById = async (id: string) => {
     const contact = await ContactModel.findOneAndUpdate(
         { _id: id, isDeleted: false },
         { $set: { isRead: true } },
-        { new: true }
+        { returnDocument: "after" }
     ).populate("repliedBy", "name email phone profileImage");
 
     if (!contact) {
@@ -100,7 +100,7 @@ const deleteMessage = async (id: string) => {
     const contact = await ContactModel.findOneAndUpdate(
         { _id: id, isDeleted: false },
         { $set: { isDeleted: true } },
-        { new: true }
+        { returnDocument: "after" }
     );
 
     if (!contact) {

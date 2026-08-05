@@ -96,7 +96,7 @@ const deleteReview = async (userId: string, isAdmin: boolean, id: string) => {
         filter.user = new mongoose.Types.ObjectId(userId);
     }
 
-    const review = await ReviewModel.findOneAndUpdate(filter, { $set: { isDeleted: true } }, { new: true });
+    const review = await ReviewModel.findOneAndUpdate(filter, { $set: { isDeleted: true } }, { returnDocument: "after" });
 
     if (!review) {
         throw new ApiError(httpStatus.NOT_FOUND, "Review not found or not authorized");

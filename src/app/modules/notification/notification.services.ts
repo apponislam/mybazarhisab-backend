@@ -51,7 +51,7 @@ const getMyNotifications = async (userId: string, groupId: string | undefined, q
 };
 
 const markAsRead = async (userId: string, id: string) => {
-    const result = await NotificationModel.findOneAndUpdate({ _id: id, deletedBy: { $ne: new mongoose.Types.ObjectId(userId) } }, { $addToSet: { readBy: new mongoose.Types.ObjectId(userId) } }, { new: true });
+    const result = await NotificationModel.findOneAndUpdate({ _id: id, deletedBy: { $ne: new mongoose.Types.ObjectId(userId) } }, { $addToSet: { readBy: new mongoose.Types.ObjectId(userId) } }, { returnDocument: "after" });
     return result;
 };
 
@@ -69,7 +69,7 @@ const markAllAsRead = async (userId: string, groupId: string | undefined) => {
 };
 
 const deleteNotification = async (userId: string, id: string) => {
-    const result = await NotificationModel.findOneAndUpdate({ _id: id }, { $addToSet: { deletedBy: new mongoose.Types.ObjectId(userId) } }, { new: true });
+    const result = await NotificationModel.findOneAndUpdate({ _id: id }, { $addToSet: { deletedBy: new mongoose.Types.ObjectId(userId) } }, { returnDocument: "after" });
     return result;
 };
 
