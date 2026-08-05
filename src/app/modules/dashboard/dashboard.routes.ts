@@ -13,5 +13,6 @@ router.get("/user-stats", auth, dashboardControllers.getUserDashboardStats);
 router.get("/monthly-trend", auth, dashboardControllers.getMonthlyExpenseTrend);
 router.get("/product-price-growth/:productId", auth, dashboardControllers.getProductPriceGrowthTrend);
 router.get("/statement", auth, dashboardControllers.getStatementPdf);
+router.get("/statement-html", auth, dashboardControllers.getStatementHtml);
 
 export const dashboardRoutes = router;

@@ -61,11 +61,27 @@ const getProductPriceGrowthTrend = catchAsync(async (req: Request, res: Response
 
 const getStatementPdf = catchAsync(async (req: Request, res: Response) => {
     const userId = req.user._id;
+    const format = req.query.format as string | undefined;
+
+    if (format === "html") {
+        const html = await dashboardServices.getStatementHtml(userId.toString(), req.user.groupId?.toString(), req.query);
+        res.setHeader("Content-Type", "text/html");
+        return res.status(httpStatus.OK).send(html);
+    }
+
     const result = await dashboardServices.getStatementPdf(userId.toString(), req.user.groupId?.toString(), req.query);
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", "inline; filename=statement.pdf");
     res.status(httpStatus.OK).send(result);
+});
+
+const getStatementHtml = catchAsync(async (req: Request, res: Response) => {
+    const userId = req.user._id;
+    const html = await dashboardServices.getStatementHtml(userId.toString(), req.user.groupId?.toString(), req.query);
+
+    res.setHeader("Content-Type", "text/html");
+    res.status(httpStatus.OK).send(html);
 });
 
 export const dashboardControllers = {
@@ -74,4 +90,5 @@ export const dashboardControllers = {
     getMonthlyExpenseTrend,
     getProductPriceGrowthTrend,
     getStatementPdf,
+    getStatementHtml,
 };
