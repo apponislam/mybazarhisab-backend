@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
-// puppeteer-core will be imported dynamically via import()
-// Dynamic import of @sparticuz/chromium-min for Vercel compatibility
+import PDFDocument from "pdfkit";
 import { getStatementHtmlTemplate } from "./statement";
 import { UserModel } from "../auth/auth.model";
 import { GroupModel } from "../group/group.model";
@@ -513,72 +512,190 @@ const getStatementHtml = async (userId: string, groupId: string | undefined, que
     });
 };
 
-const dynamicImport = (specifier: string) => new Function("specifier", "return import(specifier)")(specifier);
-
 const getStatementPdf = async (userId: string, groupId: string | undefined, query: { startDate?: string; endDate?: string; year?: string }): Promise<Buffer> => {
-    // 1. Generate dynamic HTML using the existing helper
-    const htmlContent = await getStatementHtml(userId, groupId, query);
+    let start: Date;
+    let end: Date;
+    let periodText: string;
 
-    // 2. Launch Puppeteer dynamically (Vercel-compatible in production, local standard Puppeteer in development)
-    let browser;
-    if (process.env.NODE_ENV === "production" || process.env.VERCEL) {
-        try {
-            const puppeteerCoreMod = await dynamicImport("puppeteer-core");
-            const puppeteerCore = puppeteerCoreMod.default || puppeteerCoreMod;
+    const currentYear = new Date().getFullYear();
 
-            const chromiumMod = await dynamicImport("@sparticuz/chromium-min");
-            const chromium = chromiumMod.default || chromiumMod;
-
-            const execPath = await chromium.executablePath();
-            browser = await puppeteerCore.launch({
-                args: chromium.args,
-                executablePath: execPath,
-                headless: true,
-            });
-        } catch (err) {
-            console.error("Puppeteer launch failed on Vercel:", err);
-            throw err;
+    if (query.year) {
+        const y = parseInt(query.year);
+        start = new Date(Date.UTC(y, 0, 1, 0, 0, 0, 0));
+        end = new Date(Date.UTC(y, 11, 31, 23, 59, 59, 999));
+        periodText = `Year ${y}`;
+    } else if (query.startDate || query.endDate) {
+        if (query.startDate) {
+            const [y, m, d] = query.startDate.split("-").map(Number);
+            start = new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0));
+        } else {
+            start = new Date(Date.UTC(currentYear, 0, 1, 0, 0, 0, 0));
         }
+
+        if (query.endDate) {
+            const [y, m, d] = query.endDate.split("-").map(Number);
+            end = new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999));
+        } else {
+            end = new Date(Date.UTC(currentYear, 11, 31, 23, 59, 59, 999));
+        }
+
+        const format = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+        periodText = `${format(start)} - ${format(end)}`;
     } else {
-        try {
-            const puppeteerMod = await dynamicImport("puppeteer");
-            const puppeteer = puppeteerMod.default || puppeteerMod;
-            browser = await puppeteer.launch({
-                headless: true,
-                args: ["--no-sandbox", "--disable-setuid-sandbox"],
-            });
-        } catch (err) {
-            console.error("Puppeteer local launch failed:", err);
-            throw err;
+        const now = new Date();
+        start = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0));
+        end = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999));
+        periodText = now.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+    }
+
+    const groupEntriesFilter: any = { isDeleted: false };
+    if (groupId) {
+        groupEntriesFilter.group = new mongoose.Types.ObjectId(groupId);
+    } else {
+        groupEntriesFilter.user = new mongoose.Types.ObjectId(userId);
+    }
+
+    const filter = {
+        ...groupEntriesFilter,
+        date: { $gte: start, $lte: end },
+    };
+
+    const bazarEntries = await BazarEntryModel.find(filter).populate("product").populate("user", "name email phone profileImage").sort({ date: -1, createdAt: -1 });
+    const bills = await BillModel.find(filter).populate("user", "name email phone profileImage").sort({ date: -1, createdAt: -1 });
+
+    interface StatementItem {
+        date: Date;
+        type: "BAZAR" | "BILL";
+        name: string;
+        category: string;
+        quantityText?: string;
+        user: string;
+        amount: number;
+    }
+
+    const combined: StatementItem[] = [];
+
+    let totalBazar = 0;
+    bazarEntries.forEach((entry) => {
+        const qty = entry.quantity || 1;
+        const totalCost = entry.price * qty;
+        totalBazar += totalCost;
+        combined.push({
+            date: entry.date,
+            type: "BAZAR",
+            name: (entry.product as any)?.name || "Unknown Product",
+            category: "GROCERY",
+            quantityText: `(${qty} ${entry.unit || "PIECE"} @ TK ${entry.price})`,
+            user: (entry.user as any)?.name || "Unknown",
+            amount: totalCost,
+        });
+    });
+
+    let totalBills = 0;
+    bills.forEach((bill) => {
+        totalBills += bill.amount;
+        combined.push({
+            date: bill.date,
+            type: "BILL",
+            name: bill.title,
+            category: bill.category,
+            user: (bill.user as any)?.name || "Unknown",
+            amount: bill.amount,
+        });
+    });
+
+    combined.sort((a, b) => b.date.getTime() - a.date.getTime());
+    const totalCombined = totalBazar + totalBills;
+
+    return new Promise((resolve, reject) => {
+        const doc = new PDFDocument({ margin: 40, size: "A4" });
+        const buffers: Buffer[] = [];
+
+        doc.on("data", buffers.push.bind(buffers));
+        doc.on("end", () => resolve(Buffer.concat(buffers)));
+        doc.on("error", reject);
+
+        // Title Header
+        doc.fillColor("#e8a020").fontSize(20).text("MY BAZAR HISAB", { align: "left" });
+        doc.fillColor("#555555").fontSize(10).text("Shared Household Expense & Utility Statement", { align: "left" });
+        doc.moveDown(0.5);
+
+        doc.fillColor("#333333").fontSize(10).text(`Statement Period: ${periodText}`, { align: "left" });
+        doc.text(`Generated Date: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`, { align: "left" });
+        doc.moveDown(1);
+
+        // Summary Stat Cards
+        const startY = doc.y;
+        doc.rect(40, startY, 160, 45).fillAndStroke("#fdf8f0", "#e8a020");
+        doc.fillColor("#888888").fontSize(8).text("TOTAL COMBINED EXPENSE", 48, startY + 8);
+        doc.fillColor("#e8a020").fontSize(12).text(`TK ${totalCombined.toFixed(2)}`, 48, startY + 22);
+
+        doc.rect(215, startY, 160, 45).fillAndStroke("#f5fbf7", "#22c55e");
+        doc.fillColor("#888888").fontSize(8).text("TOTAL BAZAR PURCHASES", 223, startY + 8);
+        doc.fillColor("#22c55e").fontSize(12).text(`TK ${totalBazar.toFixed(2)}`, 223, startY + 22);
+
+        doc.rect(390, startY, 165, 45).fillAndStroke("#fdf2f4", "#ef4444");
+        doc.fillColor("#888888").fontSize(8).text("TOTAL MONTHLY BILLS", 398, startY + 8);
+        doc.fillColor("#ef4444").fontSize(12).text(`TK ${totalBills.toFixed(2)}`, 398, startY + 22);
+
+        doc.y = startY + 60;
+
+        // Table Header
+        const tableTop = doc.y;
+        doc.rect(40, tableTop, 515, 20).fill("#251508");
+        doc.fillColor("#ffffff").fontSize(8);
+        doc.text("DATE", 45, tableTop + 6, { width: 65 });
+        doc.text("ITEM / DESCRIPTION", 115, tableTop + 6, { width: 175 });
+        doc.text("TYPE", 295, tableTop + 6, { width: 50 });
+        doc.text("CATEGORY", 350, tableTop + 6, { width: 70 });
+        doc.text("LOGGED BY", 425, tableTop + 6, { width: 60 });
+        doc.text("AMOUNT", 490, tableTop + 6, { width: 60, align: "right" });
+
+        let currentY = tableTop + 25;
+
+        combined.forEach((item, index) => {
+            if (currentY > 750) {
+                doc.addPage();
+                currentY = 40;
+                doc.rect(40, currentY, 515, 20).fill("#251508");
+                doc.fillColor("#ffffff").fontSize(8);
+                doc.text("DATE", 45, currentY + 6, { width: 65 });
+                doc.text("ITEM / DESCRIPTION", 115, currentY + 6, { width: 175 });
+                doc.text("TYPE", 295, currentY + 6, { width: 50 });
+                doc.text("CATEGORY", 350, currentY + 6, { width: 70 });
+                doc.text("LOGGED BY", 425, currentY + 6, { width: 60 });
+                doc.text("AMOUNT", 490, currentY + 6, { width: 60, align: "right" });
+                currentY += 25;
+            }
+
+            const isEven = index % 2 === 0;
+            if (isEven) {
+                doc.rect(40, currentY - 3, 515, 18).fill("#fcf9f5");
+            }
+
+            const dateStr = item.date.toISOString().split("T")[0];
+            doc.fillColor("#333333").fontSize(8);
+            doc.text(dateStr, 45, currentY, { width: 65 });
+
+            const desc = item.name + (item.quantityText ? ` ${item.quantityText}` : "");
+            doc.text(desc, 115, currentY, { width: 175, lineBreak: false });
+
+            const typeColor = item.type === "BAZAR" ? "#22c55e" : "#ef4444";
+            doc.fillColor(typeColor).text(item.type, 295, currentY, { width: 50 });
+
+            doc.fillColor("#555555").text(item.category, 350, currentY, { width: 70, lineBreak: false });
+            doc.text(item.user, 425, currentY, { width: 60, lineBreak: false });
+            doc.fillColor("#111111").text(`TK ${item.amount.toFixed(2)}`, 490, currentY, { width: 60, align: "right" });
+
+            currentY += 18;
+        });
+
+        if (combined.length === 0) {
+            doc.fillColor("#777777").fontSize(10).text("No expense or bill entries recorded for this period.", 45, currentY + 20, { align: "center" });
         }
-    }
 
-    try {
-        const page = await browser.newPage();
-
-        // Load the HTML content directly
-        await page.setContent(htmlContent, {
-            waitUntil: "domcontentloaded",
-        });
-
-        // Print page to PDF buffer
-        const pdfBuffer = await page.pdf({
-            format: "A4",
-            printBackground: true,
-            margin: {
-                top: "15mm",
-                bottom: "15mm",
-                left: "15mm",
-                right: "15mm",
-            },
-        });
-
-        await browser.close();
-        return Buffer.from(pdfBuffer);
-    } catch (error) {
-        await browser.close();
-        throw error;
-    }
+        doc.end();
+    });
 };
 
 export const dashboardServices = {
