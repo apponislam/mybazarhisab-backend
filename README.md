@@ -151,6 +151,28 @@ erDiagram
         boolean isDeleted
     }
 
+    Feedback {
+        ObjectId id PK
+        ObjectId user FK
+        string category
+        string subject
+        string message
+        string status
+        string adminNote
+        boolean isDeleted
+    }
+
+    Notification {
+        ObjectId id PK
+        ObjectId sender FK
+        ObjectId group FK
+        string title
+        string message
+        string type
+        ObjectIdArray readBy FK
+        ObjectIdArray deletedBy FK
+    }
+
     Contact {
         ObjectId id PK
         string name
@@ -172,6 +194,16 @@ erDiagram
         string version
         boolean isPublished
         ObjectId updatedBy FK
+    }
+
+    Faq {
+        ObjectId id PK
+        string question
+        string answer
+        string category
+        number orderIndex
+        boolean isPublished
+        boolean isDeleted
     }
 
     Visitor {
@@ -199,6 +231,9 @@ erDiagram
     Activity ||--|| User : "logged for (user)"
     Activity }o--o| Group : "related to (group)"
     Review ||--|| User : "written by (user)"
+    Feedback ||--|| User : "submitted by (user)"
+    Notification ||--|| User : "sent by (sender)"
+    Notification }o--o| Group : "sent to (group)"
     Contact }o--o| User : "replied by (repliedBy)"
     Policy }o--o| User : "updated by (updatedBy)"
     Visitor }o--o| User : "visited by (userId)"
@@ -208,15 +243,17 @@ erDiagram
 
 1. **User** (`auth.model.ts`): Stores user account details, preferences, addresses, authentication states, and their associated `groupId`.
 2. **Group** (`group.model.ts`): Coordinates household roommates/partners with unique `inviteCode`s.
-3. **Product** (`product.model.ts`): Holds product catalog names and descriptive text.
-4. **BazarEntry** (`bazar-entry.model.ts`): Tracks unit, quantity, and price for a grocery purchase.
-5. **Bill** (`bill.model.ts`): Logs utility bills such as WiFi, Rent, and Electricity categorized dynamically.
-6. **Activity** (`activity.model.ts`): Contains system logs detailing user and admin operations.
-7. **Review** (`review.model.ts`): Captures rating feedback submitted by users.
-8. **Contact** (`contact.model.ts`): Form submissions with support queries and replies.
-9. **Policy** (`policy.model.ts`): Dynamic website policies (terms and privacy guidelines).
-10. **Faq** (`faq.model.ts`): Managed frequently asked questions.
-11. **Visitor** (`visitor.model.ts`): Logs unique traffic counts by IP address and platform.
+3. **Product** (`product.model.ts`): Holds product catalog names, descriptions, and edit history tracking.
+4. **BazarEntry** (`bazar-entry.model.ts`): Tracks unit (`KG`/`GM`/`PIECE`), quantity, and price for a grocery purchase.
+5. **Bill** (`bill.model.ts`): Logs utility bills such as WiFi, Rent, Electricity, and maid expenses.
+6. **Activity** (`activity.model.ts`): System audit log records tracking user operations and admin activities.
+7. **Review** (`review.model.ts`): Rating reviews submitted by authenticated users (limit 1 per user).
+8. **Feedback** (`feedback.model.ts`): User feedback, bug reports, and feature requests.
+9. **Notification** (`notification.model.ts`): In-app push feed alerts for room expense additions, bill updates, and group actions.
+10. **Contact** (`contact.model.ts`): Form submissions with support queries and admin email replies.
+11. **Policy** (`policy.model.ts`): Dynamic website policies (Terms of Service, Privacy Policy).
+12. **Faq** (`faq.model.ts`): Managed frequently asked questions & answers catalog.
+13. **Visitor** (`visitor.model.ts`): Unique traffic hit counts by IP address, user agent, and platform (WEB/ANDROID/IOS).
 
 ---
 
@@ -229,15 +266,20 @@ src/
 │   ├── middlewares/        # Authentication, role validation, error handlers
 │   ├── modules/            # Domain-driven features (Controller, Route, Service, Model)
 │   │   ├── auth/           # Registration, login, profile, deactivation
-│   │   ├── product/        # Global product catalog
+│   │   ├── user/           # Admin user management & account control
+│   │   ├── product/        # Global product catalog & merge tools
 │   │   ├── bazar-entry/    # Daily grocery entries
 │   │   ├── bill/           # Utilities, rent, wifi, mobile bills
 │   │   ├── group/          # Create, join, and manage household partners
 │   │   ├── dashboard/      # Admin stats, monthly trends, price growth
 │   │   ├── activity/       # Admin audit logs
-│   │   ├── contact/        # Contact forms & replies
-│   │   └── feedback/       # Star reviews & testimonials
-│   └── routes/             # Unified route registry index
+│   │   ├── contact/        # Contact forms & support replies
+│   │   ├── feedback/       # Feedback & bug reports
+│   │   ├── review/         # Star rating reviews & user review status
+│   │   ├── notification/   # User notification feeds & unread counts
+│   │   ├── visitor/        # Visitor analytics & platform metrics
+│   │   ├── policy/         # Terms of Service & Privacy Policy management
+│   │   └── faq/            # Frequently Asked Questions management
 │   └── routes/             # Unified route registry index
 ├── errors/                 # Global ApiError utilities
 ├── utils/                  # Nodemailer, email templates, response structures
@@ -259,6 +301,20 @@ src/
 | `PATCH` | `/auth/update-profile` | Private | Update logged user info |
 | `DELETE`| `/auth/deactivate` | Private | Soft-delete own account |
 
+### 👑 User Management (`/api/v1/users`)
+| Method | Path | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/users` | **Admin** | Query all users (supports page, limit, search & role filters) |
+| `GET` | `/users/:id` | **Admin** | Fetch detailed user profile & overall activity summary |
+| `GET` | `/users/:id/reviews` | **Admin** | Get all reviews submitted by specific user |
+| `GET` | `/users/:id/activities` | **Admin** | Get audit activity logs for specific user |
+| `GET` | `/users/:id/products` | **Admin** | Get product catalog items created by user |
+| `GET` | `/users/:id/bazar-entries` | **Admin** | Get grocery purchase entries for user |
+| `GET` | `/users/:id/bills` | **Admin** | Get utility bill records logged by user |
+| `PATCH` | `/users/:id/status` | **Admin** | Toggle user status (Active vs Suspended) |
+| `PATCH` | `/users/:id/role` | **Admin** | Toggle user role (`ADMIN` vs `USER`) |
+| `DELETE`| `/users/:id` | **Admin** | Soft delete user account |
+
 ### 👥 Groups (`/api/v1/groups`)
 | Method | Path | Access | Description |
 | :--- | :--- | :--- | :--- |
@@ -272,6 +328,7 @@ src/
 | :--- | :--- | :--- | :--- |
 | `POST` | `/products` | Private | Create a global product catalog item |
 | `GET` | `/products` | Private | Query products (supports pagination & search) |
+| `POST` | `/products/merge` | **Admin** | Merge duplicate source product into target product |
 | `PATCH` | `/products/:id` | Private | Update product details |
 | `DELETE`| `/products/:id` | Private | Delete product |
 
@@ -317,13 +374,55 @@ src/
 | `PATCH` | `/contacts/:id/reply` | **Admin** | Dispatch reply email to user |
 | `DELETE`| `/contacts/:id` | **Admin** | Delete support message |
 
-### ⭐ Feedback & Reviews (`/api/v1/feedbacks`)
+### 💬 Feedback (`/api/v1/feedbacks`)
 | Method | Path | Access | Description |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/feedbacks` | Private | Post a rating review comment |
-| `GET` | `/feedbacks` | Public | Fetch approved testimonials list. Admins get all. |
-| `PATCH` | `/feedbacks/:id/toggle-public` | **Admin** | Approve/hide testimonial on landing page |
-| `DELETE`| `/feedbacks/:id` | Private | Delete feedback review |
+| `POST` | `/feedbacks` | Private | Submit general feedback, bug report, or feature request |
+| `GET` | `/feedbacks` | **Admin** | List all user feedbacks (paginated) |
+| `PATCH` | `/feedbacks/:id/status` | **Admin** | Update feedback status (PENDING / IN_REVIEW / RESOLVED) |
+| `DELETE`| `/feedbacks/:id` | **Admin** | Delete feedback entry |
+
+### ⭐ Reviews (`/api/v1/reviews`)
+| Method | Path | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/reviews` | Private | Post a rating review & comment |
+| `GET` | `/reviews/summary` | Public | Get aggregate rating statistics & star breakdown |
+| `GET` | `/reviews/me` | Private | Get user review status (`hasReviewed`, `canReview`, `review`) |
+| `GET` | `/reviews` | Optional Auth | List reviews (Public sees approved; Admin sees all) |
+| `PATCH` | `/reviews/:id/toggle-public` | **Admin** | Approve/hide review on landing page |
+| `DELETE`| `/reviews/:id` | Private | Delete review entry |
+
+### 🔔 Notifications (`/api/v1/notifications`)
+| Method | Path | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/notifications` | Private | Fetch logged user's notification feed |
+| `GET` | `/notifications/unread-count` | Private | Fetch unread notifications count |
+| `PATCH` | `/notifications/mark-all-read` | Private | Mark all notifications as read |
+| `DELETE`| `/notifications` | Private | Clear all user notifications |
+| `DELETE`| `/notifications/:id` | Private | Delete a single notification item |
+
+### 🌐 Visitor Analytics (`/api/v1/visitors`)
+| Method | Path | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/visitors/track` | Public | Record visitor traffic (IP address, platform, user agent) |
+| `GET` | `/visitors/stats` | **Admin** | Get total visits & platform metrics breakdowns |
+| `GET` | `/visitors` | **Admin** | Fetch paginated visitor logs |
+
+### 📜 Policies & Terms (`/api/v1/policies`)
+| Method | Path | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/policies` | Public | Fetch published policies (Privacy Policy, Terms of Service) |
+| `POST` | `/policies` | **Admin** | Create or update site policy document |
+| `PATCH` | `/policies/:id` | **Admin** | Update policy content |
+| `DELETE`| `/policies/:id` | **Admin** | Delete policy document |
+
+### ❓ FAQs (`/api/v1/faqs`)
+| Method | Path | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/faqs` | Public | Fetch published frequently asked questions list |
+| `POST` | `/faqs` | **Admin** | Create new FAQ entry |
+| `PATCH` | `/faqs/:id` | **Admin** | Update FAQ question/answer details |
+| `DELETE`| `/faqs/:id` | **Admin** | Delete FAQ item |
 
 ---
 
