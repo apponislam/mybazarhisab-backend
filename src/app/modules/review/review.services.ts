@@ -105,10 +105,25 @@ const deleteReview = async (userId: string, isAdmin: boolean, id: string) => {
     return review;
 };
 
+const getMyReview = async (userId: string) => {
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+    const review = await ReviewModel.findOne({
+        user: userObjectId,
+        isDeleted: false,
+    }).populate("user", "name email phone profileImage");
+
+    return {
+        hasReviewed: !!review,
+        canReview: !review,
+        review: review || null,
+    };
+};
+
 export const reviewServices = {
     createReview,
     getAllReviews,
     getReviewSummaryStats,
+    getMyReview,
     toggleReviewVisibility,
     deleteReview,
 };

@@ -24,7 +24,7 @@ const checkAuth = catchAsync(async (req: Request, res: Response, next: NextFunct
         return next();
     }
 
-    const user = await UserModel.findOne({ _id: decoded._id });
+    const user = await UserModel.findOne({ _id: decoded._id, isDeleted: false });
 
     if (user && user.isActive && user.role === decoded.role) {
         req.user = user;
