@@ -615,83 +615,107 @@ const getStatementPdf = async (userId: string, groupId: string | undefined, quer
         doc.on("end", () => resolve(Buffer.concat(buffers)));
         doc.on("error", reject);
 
-        // Title Header
-        doc.fillColor("#e8a020").fontSize(20).text("MY BAZAR HISAB", { align: "left" });
-        doc.fillColor("#555555").fontSize(10).text("Shared Household Expense & Utility Statement", { align: "left" });
-        doc.moveDown(0.5);
+        const generatedDate = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
-        doc.fillColor("#333333").fontSize(10).text(`Statement Period: ${periodText}`, { align: "left" });
-        doc.text(`Generated Date: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`, { align: "left" });
-        doc.moveDown(1);
+        // ─── Header ─────────────────────────────────────────────────────────────
+        doc.font("Helvetica-Bold").fontSize(22).fillColor("#1f2937").text("Bazar Hisab", 40, 40);
+        doc.font("Helvetica").fontSize(9.5).fillColor("#4b5563").text("Consolidated Monthly Statement", 40, 66);
 
-        // Summary Stat Cards
-        const startY = doc.y;
-        doc.rect(40, startY, 160, 45).fillAndStroke("#fdf8f0", "#e8a020");
-        doc.fillColor("#888888").fontSize(8).text("TOTAL COMBINED EXPENSE", 48, startY + 8);
-        doc.fillColor("#e8a020").fontSize(12).text(`TK ${totalCombined.toFixed(2)}`, 48, startY + 22);
+        // Header Meta (Right Aligned)
+        doc.font("Helvetica").fontSize(8.5).fillColor("#4b5563").text("Statement Period: ", 360, 45, { continued: true });
+        doc.font("Helvetica-Bold").fillColor("#1f2937").text(periodText);
 
-        doc.rect(215, startY, 160, 45).fillAndStroke("#f5fbf7", "#22c55e");
-        doc.fillColor("#888888").fontSize(8).text("TOTAL BAZAR PURCHASES", 223, startY + 8);
-        doc.fillColor("#22c55e").fontSize(12).text(`TK ${totalBazar.toFixed(2)}`, 223, startY + 22);
+        doc.font("Helvetica").fontSize(8.5).fillColor("#4b5563").text("Generated Date: ", 360, 60, { continued: true });
+        doc.font("Helvetica-Bold").fillColor("#1f2937").text(generatedDate);
 
-        doc.rect(390, startY, 165, 45).fillAndStroke("#fdf2f4", "#ef4444");
-        doc.fillColor("#888888").fontSize(8).text("TOTAL MONTHLY BILLS", 398, startY + 8);
-        doc.fillColor("#ef4444").fontSize(12).text(`TK ${totalBills.toFixed(2)}`, 398, startY + 22);
+        // Header Bottom Border Line
+        doc.moveTo(40, 85).lineTo(555, 85).lineWidth(2).strokeColor("#1f2937").stroke();
 
-        doc.y = startY + 60;
+        // ─── Summary Box (3 Columns) ──────────────────────────────────────────
+        const sumY = 98;
+        const sumH = 46;
+        const colW = 171.6;
 
-        // Table Header
-        const tableTop = doc.y;
-        doc.rect(40, tableTop, 515, 20).fill("#251508");
-        doc.fillColor("#ffffff").fontSize(8);
-        doc.text("DATE", 45, tableTop + 6, { width: 65 });
-        doc.text("ITEM / DESCRIPTION", 115, tableTop + 6, { width: 175 });
-        doc.text("TYPE", 295, tableTop + 6, { width: 50 });
-        doc.text("CATEGORY", 350, tableTop + 6, { width: 70 });
-        doc.text("LOGGED BY", 425, tableTop + 6, { width: 60 });
-        doc.text("AMOUNT", 490, tableTop + 6, { width: 60, align: "right" });
+        // Background box & border
+        doc.rect(40, sumY, 515, sumH).fillAndStroke("#f9fafb", "#d1d5db");
 
-        let currentY = tableTop + 25;
+        // Column Dividers
+        doc.moveTo(40 + colW, sumY).lineTo(40 + colW, sumY + sumH).lineWidth(1).strokeColor("#d1d5db").stroke();
+        doc.moveTo(40 + colW * 2, sumY).lineTo(40 + colW * 2, sumY + sumH).lineWidth(1).strokeColor("#d1d5db").stroke();
+
+        // Summary Col 1: Total Combined
+        doc.font("Helvetica-Bold").fontSize(7.5).fillColor("#6b7280").text("TOTAL COMBINED", 52, sumY + 10);
+        doc.font("Helvetica-Bold").fontSize(13).fillColor("#1f2937").text(`TK ${totalCombined.toFixed(2)}`, 52, sumY + 24);
+
+        // Summary Col 2: Bazar Expenses
+        doc.font("Helvetica-Bold").fontSize(7.5).fillColor("#6b7280").text("BAZAR EXPENSES", 52 + colW, sumY + 10);
+        doc.font("Helvetica-Bold").fontSize(13).fillColor("#059669").text(`TK ${totalBazar.toFixed(2)}`, 52 + colW, sumY + 24);
+
+        // Summary Col 3: Utility Bills
+        doc.font("Helvetica-Bold").fontSize(7.5).fillColor("#6b7280").text("UTILITY BILLS", 52 + colW * 2, sumY + 10);
+        doc.font("Helvetica-Bold").fontSize(13).fillColor("#2563eb").text(`TK ${totalBills.toFixed(2)}`, 52 + colW * 2, sumY + 24);
+
+        // ─── Table Section ──────────────────────────────────────────────────────
+        const drawTableHeader = (yPos: number) => {
+            doc.rect(40, yPos, 515, 22).fillAndStroke("#f3f4f6", "#d1d5db");
+            doc.font("Helvetica-Bold").fontSize(7.5).fillColor("#1f2937");
+
+            doc.text("DATE", 48, yPos + 7, { width: 65 });
+            doc.text("DESCRIPTION / DETAILS", 118, yPos + 7, { width: 175 });
+            doc.text("TYPE", 298, yPos + 7, { width: 45 });
+            doc.text("CATEGORY", 350, yPos + 7, { width: 65 });
+            doc.text("ADDED BY", 420, yPos + 7, { width: 65 });
+            doc.text("AMOUNT", 490, yPos + 7, { width: 57, align: "right" });
+        };
+
+        let currentY = sumY + sumH + 15;
+        drawTableHeader(currentY);
+        currentY += 22;
 
         combined.forEach((item, index) => {
-            if (currentY > 750) {
+            if (currentY > 760) {
                 doc.addPage();
                 currentY = 40;
-                doc.rect(40, currentY, 515, 20).fill("#251508");
-                doc.fillColor("#ffffff").fontSize(8);
-                doc.text("DATE", 45, currentY + 6, { width: 65 });
-                doc.text("ITEM / DESCRIPTION", 115, currentY + 6, { width: 175 });
-                doc.text("TYPE", 295, currentY + 6, { width: 50 });
-                doc.text("CATEGORY", 350, currentY + 6, { width: 70 });
-                doc.text("LOGGED BY", 425, currentY + 6, { width: 60 });
-                doc.text("AMOUNT", 490, currentY + 6, { width: 60, align: "right" });
-                currentY += 25;
-            }
-
-            const isEven = index % 2 === 0;
-            if (isEven) {
-                doc.rect(40, currentY - 3, 515, 18).fill("#fcf9f5");
+                drawTableHeader(currentY);
+                currentY += 22;
             }
 
             const dateStr = item.date.toISOString().split("T")[0];
-            doc.fillColor("#333333").fontSize(8);
-            doc.text(dateStr, 45, currentY, { width: 65 });
 
-            const desc = item.name + (item.quantityText ? ` ${item.quantityText}` : "");
-            doc.text(desc, 115, currentY, { width: 175, lineBreak: false });
+            // Row Bottom Border Line
+            doc.moveTo(40, currentY + 18).lineTo(555, currentY + 18).lineWidth(0.5).strokeColor("#e5e7eb").stroke();
 
-            const typeColor = item.type === "BAZAR" ? "#22c55e" : "#ef4444";
-            doc.fillColor(typeColor).text(item.type, 295, currentY, { width: 50 });
+            // Date
+            doc.font("Helvetica").fontSize(8).fillColor("#4b5563").text(dateStr, 48, currentY + 5, { width: 65 });
 
-            doc.fillColor("#555555").text(item.category, 350, currentY, { width: 70, lineBreak: false });
-            doc.text(item.user, 425, currentY, { width: 60, lineBreak: false });
-            doc.fillColor("#111111").text(`TK ${item.amount.toFixed(2)}`, 490, currentY, { width: 60, align: "right" });
+            // Description + Quantity Subtext
+            doc.font("Helvetica-Bold").fontSize(8.5).fillColor("#111827").text(item.name, 118, currentY + 4, { width: 175, lineBreak: false });
+            if (item.quantityText) {
+                const nameWidth = doc.widthOfString(item.name);
+                doc.font("Helvetica").fontSize(7).fillColor("#6b7280").text(` ${item.quantityText}`, 118 + nameWidth + 2, currentY + 5, { width: 175 - nameWidth, lineBreak: false });
+            }
 
-            currentY += 18;
+            // Type Badge (Bazar vs Bill)
+            if (item.type === "BAZAR") {
+                doc.roundedRect(296, currentY + 3, 44, 13, 3).fillAndStroke("#e6f4ea", "#a7f3d0");
+                doc.font("Helvetica-Bold").fontSize(7).fillColor("#065f46").text("BAZAR", 296, currentY + 6, { width: 44, align: "center" });
+            } else {
+                doc.roundedRect(296, currentY + 3, 44, 13, 3).fillAndStroke("#e8f0fe", "#bfdbfe");
+                doc.font("Helvetica-Bold").fontSize(7).fillColor("#1e3a8a").text("BILL", 296, currentY + 6, { width: 44, align: "center" });
+            }
+
+            // Category & Added By
+            doc.font("Helvetica").fontSize(8).fillColor("#374151").text(item.category, 350, currentY + 5, { width: 65, lineBreak: false });
+            doc.font("Helvetica").fontSize(8).fillColor("#374151").text(item.user, 420, currentY + 5, { width: 65, lineBreak: false });
+
+            // Amount
+            doc.font("Helvetica-Bold").fontSize(8.5).fillColor("#111827").text(`TK ${item.amount.toFixed(2)}`, 490, currentY + 4, { width: 57, align: "right" });
+
+            currentY += 19;
         });
 
         if (combined.length === 0) {
-            doc.fillColor("#777777").fontSize(10).text("No expense or bill entries recorded for this period.", 45, currentY + 20, { align: "center" });
+            doc.font("Helvetica").fontSize(9).fillColor("#6b7280").text("No matching entries found for the selected period.", 40, currentY + 20, { align: "center", width: 515 });
         }
 
         doc.end();

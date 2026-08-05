@@ -258,8 +258,8 @@ export const getStatementHtmlTemplate = (data: {
                 <p>Consolidated Monthly Statement</p>
             </div>
             <div class="meta-area">
-                <div>Statement Period: <strong>\${data.periodText}</strong></div>
-                <div>Generated Date: <strong>\${data.generatedDate}</strong></div>
+                <div>Statement Period: <strong>${data.periodText}</strong></div>
+                <div>Generated Date: <strong>${data.generatedDate}</strong></div>
             </div>
         </div>
 
@@ -267,21 +267,21 @@ export const getStatementHtmlTemplate = (data: {
         <div class="summary-box">
             <div class="summary-item">
                 <span class="summary-label">Total Combined</span>
-                <span class="summary-value">৳\${data.totalCombined}</span>
+                <span class="summary-value">৳${data.totalCombined}</span>
             </div>
             <div class="summary-item">
                 <span class="summary-label">Bazar Expenses</span>
-                <span class="summary-value">৳\${data.totalBazar}</span>
+                <span class="summary-value">৳${data.totalBazar}</span>
             </div>
             <div class="summary-item">
                 <span class="summary-label">Utility Bills</span>
-                <span class="summary-value">৳\${data.totalBills}</span>
+                <span class="summary-value">৳${data.totalBills}</span>
             </div>
         </div>
 
         <!-- Consolidated Table -->
         <div class="statement-table-container">
-            <table id="statementTable" style="\${data.tableStyle}">
+            <table id="statementTable" style="${data.tableStyle}">
                 <thead>
                     <tr>
                         <th style="width: 15%;">Date</th>
@@ -293,11 +293,11 @@ export const getStatementHtmlTemplate = (data: {
                     </tr>
                 </thead>
                 <tbody>
-                    \${data.tableRows}
+                    ${data.tableRows}
                 </tbody>
             </table>
 
-            <div class="empty-state" id="emptyState" style="\${data.emptyStateStyle}">
+            <div class="empty-state" id="emptyState" style="${data.emptyStateStyle}">
                 No matching entries found for the selected period.
             </div>
         </div>
