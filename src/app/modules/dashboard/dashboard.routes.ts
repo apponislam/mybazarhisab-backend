@@ -7,8 +7,9 @@ const router = Router();
 
 // Admin
 router.get("/admin-stats", auth, authorize(["ADMIN"]), dashboardControllers.getAdminDashboardStats);
+router.get("/admin-monthly-analysis", auth, authorize(["ADMIN"]), dashboardControllers.getAdminMonthlyAnalysis);
 
-// User 
+// User
 router.get("/user-stats", auth, dashboardControllers.getUserDashboardStats);
 router.get("/monthly-trend", auth, dashboardControllers.getMonthlyExpenseTrend);
 router.get("/product-price-growth/:productId", auth, dashboardControllers.getProductPriceGrowthTrend);

@@ -43,12 +43,7 @@ const getMonthlyExpenseTrend = catchAsync(async (req: Request, res: Response) =>
 const getProductPriceGrowthTrend = catchAsync(async (req: Request, res: Response) => {
     const userId = req.user._id;
     const { productId } = req.params;
-    const result = await dashboardServices.getProductPriceGrowthTrend(
-        userId.toString(),
-        req.user.groupId?.toString(),
-        productId as string,
-        req.query
-    );
+    const result = await dashboardServices.getProductPriceGrowthTrend(userId.toString(), req.user.groupId?.toString(), productId as string, req.query);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
@@ -84,8 +79,20 @@ const getStatementHtml = catchAsync(async (req: Request, res: Response) => {
     res.status(httpStatus.OK).send(html);
 });
 
+const getAdminMonthlyAnalysis = catchAsync(async (req: Request, res: Response) => {
+    const result = await dashboardServices.getAdminMonthlyAnalysis(req.query as any);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Admin monthly analysis retrieved successfully",
+        data: result,
+    });
+});
+
 export const dashboardControllers = {
     getAdminDashboardStats,
+    getAdminMonthlyAnalysis,
     getUserDashboardStats,
     getMonthlyExpenseTrend,
     getProductPriceGrowthTrend,

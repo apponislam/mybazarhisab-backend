@@ -35,10 +35,7 @@ const getExpenseAggregation = async (filter: any, start: Date, end: Date): Promi
                 _id: null,
                 total: {
                     $sum: {
-                        $ifNull: [
-                            "$totalPrice",
-                            { $multiply: ["$price", { $ifNull: ["$quantity", 1] }] },
-                        ],
+                        $ifNull: ["$totalPrice", { $multiply: ["$price", { $ifNull: ["$quantity", 1] }] }],
                     },
                 },
             },
@@ -83,9 +80,7 @@ const getYearlyTrendAggregation = async (model: any, filter: any, year: number) 
         {
             $group: {
                 _id: { $month: "$date" },
-                total: isBazarModel
-                    ? { $sum: { $ifNull: ["$totalPrice", { $multiply: ["$price", { $ifNull: ["$quantity", 1] }] }] } }
-                    : { $sum: "$amount" },
+                total: isBazarModel ? { $sum: { $ifNull: ["$totalPrice", { $multiply: ["$price", { $ifNull: ["$quantity", 1] }] }] } } : { $sum: "$amount" },
             },
         },
     ]);
@@ -114,9 +109,7 @@ const getMonthlyTrendAggregation = async (model: any, filter: any, year: number,
         {
             $group: {
                 _id: { $dayOfMonth: "$date" },
-                total: isBazarModel
-                    ? { $sum: { $ifNull: ["$totalPrice", { $multiply: ["$price", { $ifNull: ["$quantity", 1] }] }] } }
-                    : { $sum: "$amount" },
+                total: isBazarModel ? { $sum: { $ifNull: ["$totalPrice", { $multiply: ["$price", { $ifNull: ["$quantity", 1] }] }] } } : { $sum: "$amount" },
             },
         },
     ]);
@@ -650,20 +643,46 @@ const getStatementPdf = async (userId: string, groupId: string | undefined, quer
         doc.rect(40, sumY, 515, sumH).fillAndStroke("#f9fafb", "#d1d5db");
 
         // Column Dividers
-        doc.moveTo(40 + colW, sumY).lineTo(40 + colW, sumY + sumH).lineWidth(1).strokeColor("#d1d5db").stroke();
-        doc.moveTo(40 + colW * 2, sumY).lineTo(40 + colW * 2, sumY + sumH).lineWidth(1).strokeColor("#d1d5db").stroke();
+        doc.moveTo(40 + colW, sumY)
+            .lineTo(40 + colW, sumY + sumH)
+            .lineWidth(1)
+            .strokeColor("#d1d5db")
+            .stroke();
+        doc.moveTo(40 + colW * 2, sumY)
+            .lineTo(40 + colW * 2, sumY + sumH)
+            .lineWidth(1)
+            .strokeColor("#d1d5db")
+            .stroke();
 
         // Summary Col 1: Total Combined
-        doc.font("Helvetica-Bold").fontSize(7.5).fillColor("#6b7280").text("TOTAL COMBINED", 52, sumY + 10);
-        doc.font("Helvetica-Bold").fontSize(13).fillColor("#1f2937").text(`TK ${totalCombined.toFixed(2)}`, 52, sumY + 24);
+        doc.font("Helvetica-Bold")
+            .fontSize(7.5)
+            .fillColor("#6b7280")
+            .text("TOTAL COMBINED", 52, sumY + 10);
+        doc.font("Helvetica-Bold")
+            .fontSize(13)
+            .fillColor("#1f2937")
+            .text(`TK ${totalCombined.toFixed(2)}`, 52, sumY + 24);
 
         // Summary Col 2: Bazar Expenses
-        doc.font("Helvetica-Bold").fontSize(7.5).fillColor("#6b7280").text("BAZAR EXPENSES", 52 + colW, sumY + 10);
-        doc.font("Helvetica-Bold").fontSize(13).fillColor("#059669").text(`TK ${totalBazar.toFixed(2)}`, 52 + colW, sumY + 24);
+        doc.font("Helvetica-Bold")
+            .fontSize(7.5)
+            .fillColor("#6b7280")
+            .text("BAZAR EXPENSES", 52 + colW, sumY + 10);
+        doc.font("Helvetica-Bold")
+            .fontSize(13)
+            .fillColor("#059669")
+            .text(`TK ${totalBazar.toFixed(2)}`, 52 + colW, sumY + 24);
 
         // Summary Col 3: Utility Bills
-        doc.font("Helvetica-Bold").fontSize(7.5).fillColor("#6b7280").text("UTILITY BILLS", 52 + colW * 2, sumY + 10);
-        doc.font("Helvetica-Bold").fontSize(13).fillColor("#2563eb").text(`TK ${totalBills.toFixed(2)}`, 52 + colW * 2, sumY + 24);
+        doc.font("Helvetica-Bold")
+            .fontSize(7.5)
+            .fillColor("#6b7280")
+            .text("UTILITY BILLS", 52 + colW * 2, sumY + 10);
+        doc.font("Helvetica-Bold")
+            .fontSize(13)
+            .fillColor("#2563eb")
+            .text(`TK ${totalBills.toFixed(2)}`, 52 + colW * 2, sumY + 24);
 
         // ─── Table Section ──────────────────────────────────────────────────────
         const drawTableHeader = (yPos: number) => {
@@ -693,47 +712,179 @@ const getStatementPdf = async (userId: string, groupId: string | undefined, quer
             const dateStr = item.date.toISOString().split("T")[0];
 
             // Row Bottom Border Line
-            doc.moveTo(40, currentY + 18).lineTo(555, currentY + 18).lineWidth(0.5).strokeColor("#e5e7eb").stroke();
+            doc.moveTo(40, currentY + 18)
+                .lineTo(555, currentY + 18)
+                .lineWidth(0.5)
+                .strokeColor("#e5e7eb")
+                .stroke();
 
             // Date
-            doc.font("Helvetica").fontSize(8).fillColor("#4b5563").text(dateStr, 48, currentY + 5, { width: 65 });
+            doc.font("Helvetica")
+                .fontSize(8)
+                .fillColor("#4b5563")
+                .text(dateStr, 48, currentY + 5, { width: 65 });
 
             // Description + Quantity Subtext
-            doc.font("Helvetica-Bold").fontSize(8.5).fillColor("#111827").text(item.name, 118, currentY + 4, { width: 175, lineBreak: false });
+            doc.font("Helvetica-Bold")
+                .fontSize(8.5)
+                .fillColor("#111827")
+                .text(item.name, 118, currentY + 4, { width: 175, lineBreak: false });
             if (item.quantityText) {
                 const nameWidth = doc.widthOfString(item.name);
-                doc.font("Helvetica").fontSize(7).fillColor("#6b7280").text(` ${item.quantityText}`, 118 + nameWidth + 2, currentY + 5, { width: 175 - nameWidth, lineBreak: false });
+                doc.font("Helvetica")
+                    .fontSize(7)
+                    .fillColor("#6b7280")
+                    .text(` ${item.quantityText}`, 118 + nameWidth + 2, currentY + 5, { width: 175 - nameWidth, lineBreak: false });
             }
 
             // Type Badge (Bazar vs Bill)
             if (item.type === "BAZAR") {
                 doc.roundedRect(296, currentY + 3, 44, 13, 3).fillAndStroke("#e6f4ea", "#a7f3d0");
-                doc.font("Helvetica-Bold").fontSize(7).fillColor("#065f46").text("BAZAR", 296, currentY + 6, { width: 44, align: "center" });
+                doc.font("Helvetica-Bold")
+                    .fontSize(7)
+                    .fillColor("#065f46")
+                    .text("BAZAR", 296, currentY + 6, { width: 44, align: "center" });
             } else {
                 doc.roundedRect(296, currentY + 3, 44, 13, 3).fillAndStroke("#e8f0fe", "#bfdbfe");
-                doc.font("Helvetica-Bold").fontSize(7).fillColor("#1e3a8a").text("BILL", 296, currentY + 6, { width: 44, align: "center" });
+                doc.font("Helvetica-Bold")
+                    .fontSize(7)
+                    .fillColor("#1e3a8a")
+                    .text("BILL", 296, currentY + 6, { width: 44, align: "center" });
             }
 
             // Category & Added By
-            doc.font("Helvetica").fontSize(8).fillColor("#374151").text(item.category, 350, currentY + 5, { width: 65, lineBreak: false });
-            doc.font("Helvetica").fontSize(8).fillColor("#374151").text(item.user, 420, currentY + 5, { width: 65, lineBreak: false });
+            doc.font("Helvetica")
+                .fontSize(8)
+                .fillColor("#374151")
+                .text(item.category, 350, currentY + 5, { width: 65, lineBreak: false });
+            doc.font("Helvetica")
+                .fontSize(8)
+                .fillColor("#374151")
+                .text(item.user, 420, currentY + 5, { width: 65, lineBreak: false });
 
             // Amount
-            doc.font("Helvetica-Bold").fontSize(8.5).fillColor("#111827").text(`TK ${item.amount.toFixed(2)}`, 490, currentY + 4, { width: 57, align: "right" });
+            doc.font("Helvetica-Bold")
+                .fontSize(8.5)
+                .fillColor("#111827")
+                .text(`TK ${item.amount.toFixed(2)}`, 490, currentY + 4, { width: 57, align: "right" });
 
             currentY += 19;
         });
 
         if (combined.length === 0) {
-            doc.font("Helvetica").fontSize(9).fillColor("#6b7280").text("No matching entries found for the selected period.", 40, currentY + 20, { align: "center", width: 515 });
+            doc.font("Helvetica")
+                .fontSize(9)
+                .fillColor("#6b7280")
+                .text("No matching entries found for the selected period.", 40, currentY + 20, { align: "center", width: 515 });
         }
 
         doc.end();
     });
 };
 
+const getAdminMonthlyAnalysis = async (query: { year?: string }) => {
+    const now = new Date();
+    const year = query.year ? parseInt(query.year, 10) : now.getFullYear();
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    const startOfYear = new Date(year, 0, 1);
+    const endOfYear = new Date(year, 11, 31, 23, 59, 59, 999);
+
+    const [bazarRes, billRes, userRes, groupRes, productRes] = await Promise.all([
+        BazarEntryModel.aggregate([
+            { $match: { isDeleted: false, date: { $gte: startOfYear, $lte: endOfYear } } },
+            {
+                $group: {
+                    _id: { $month: "$date" },
+                    count: { $sum: 1 },
+                    total: { $sum: { $ifNull: ["$totalPrice", { $multiply: ["$price", { $ifNull: ["$quantity", 1] }] }] } },
+                },
+            },
+        ]),
+        BillModel.aggregate([
+            { $match: { isDeleted: false, date: { $gte: startOfYear, $lte: endOfYear } } },
+            {
+                $group: {
+                    _id: { $month: "$date" },
+                    count: { $sum: 1 },
+                    total: { $sum: "$amount" },
+                },
+            },
+        ]),
+        UserModel.aggregate([
+            { $match: { isDeleted: false, createdAt: { $gte: startOfYear, $lte: endOfYear } } },
+            {
+                $group: {
+                    _id: { $month: "$createdAt" },
+                    count: { $sum: 1 },
+                },
+            },
+        ]),
+        GroupModel.aggregate([
+            { $match: { isDeleted: false, createdAt: { $gte: startOfYear, $lte: endOfYear } } },
+            {
+                $group: {
+                    _id: { $month: "$createdAt" },
+                    count: { $sum: 1 },
+                },
+            },
+        ]),
+        ProductModel.aggregate([
+            { $match: { isDeleted: false, createdAt: { $gte: startOfYear, $lte: endOfYear } } },
+            {
+                $group: {
+                    _id: { $month: "$createdAt" },
+                    count: { $sum: 1 },
+                },
+            },
+        ]),
+    ]);
+
+    const toMap = (arr: any[]) => {
+        const map: Record<number, { count: number; total: number }> = {};
+        arr.forEach((item) => {
+            map[item._id] = { count: item.count || 0, total: item.total || 0 };
+        });
+        return map;
+    };
+
+    const bazarMap = toMap(bazarRes);
+    const billMap = toMap(billRes);
+    const userMap = toMap(userRes);
+    const groupMap = toMap(groupRes);
+    const productMap = toMap(productRes);
+
+    const analysis = monthNames.map((name, index) => {
+        const monthNum = index + 1;
+        const bazarInfo = bazarMap[monthNum] || { count: 0, total: 0 };
+        const billInfo = billMap[monthNum] || { count: 0, total: 0 };
+        const userInfo = userMap[monthNum] || { count: 0, total: 0 };
+        const groupInfo = groupMap[monthNum] || { count: 0, total: 0 };
+        const productInfo = productMap[monthNum] || { count: 0, total: 0 };
+
+        return {
+            month: name,
+            monthNumber: monthNum,
+            bazarEntriesCount: bazarInfo.count,
+            bazarExpense: bazarInfo.total,
+            billsCount: billInfo.count,
+            billExpense: billInfo.total,
+            totalExpense: bazarInfo.total + billInfo.total,
+            usersRegistered: userInfo.count,
+            groupsCreated: groupInfo.count,
+            productsCreated: productInfo.count,
+        };
+    });
+
+    return {
+        year,
+        analysis,
+    };
+};
+
 export const dashboardServices = {
     getAdminDashboardStats,
+    getAdminMonthlyAnalysis,
     getUserDashboardStats,
     getMonthlyExpenseTrend,
     getProductPriceGrowthTrend,
