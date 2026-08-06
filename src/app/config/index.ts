@@ -21,11 +21,14 @@ export default {
     client_url: process.env.CLIENT_URL,
 
     mail: {
+        driver: process.env.MAIL || "NODEMAILER",
         smtp_host: process.env.SMTP_HOST,
         smtp_port: process.env.SMTP_PORT,
         smtp_secure: process.env.SMTP_SECURE,
         smtp_user: process.env.SMTP_USER,
         smtp_pass: process.env.SMTP_PASS,
+        resend_api_key: process.env.RESEND_API_KEY,
+        from_email: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
     },
 
     stripe: {

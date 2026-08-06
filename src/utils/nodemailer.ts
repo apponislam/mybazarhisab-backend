@@ -11,7 +11,7 @@ const transporter = nodemailer.createTransport({
     },
 } as nodemailer.TransportOptions);
 
-export const sendMail = (to: string | string[], subject: string, html: string, from?: string) => {
+export const sendNodemailerMail = (to: string | string[], subject: string, html: string, from?: string) => {
     const mailOptions = {
         from: from || config.mail.smtp_user,
         to: Array.isArray(to) ? to.join(", ") : to,

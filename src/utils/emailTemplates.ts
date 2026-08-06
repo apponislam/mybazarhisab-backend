@@ -1,4 +1,16 @@
-import { sendMail } from "./nodemailer";
+import { sendNodemailerMail } from "./nodemailer";
+import { sendEmailWithResend } from "./resend";
+import config from "../app/config";
+
+const sendMail = (to: string | string[], subject: string, html: string, from?: string) => {
+    if (config.mail.driver === "RESEND") {
+        sendEmailWithResend({ to, subject, html, from }).catch((error) => {
+            console.error("Resend Email error:", error);
+        });
+    } else {
+        sendNodemailerMail(to, subject, html, from);
+    }
+};
 
 export const sendVerificationEmail = (email: string, name: string, verificationUrl: string, otp?: string) => {
     const html = `
