@@ -337,12 +337,11 @@ const getProductPriceGrowthTrend = async (userId: string, groupId: string | unde
     const entries = await BazarEntryModel.find(filter).sort({ date: 1, createdAt: 1 });
 
     const normalizedEntries = entries.map((entry) => {
-        const qty = entry.quantity || 1;
-        let pricePerUnit = entry.price / qty;
+        let pricePerUnit = entry.price;
         let unit: string = entry.unit || "PIECE";
 
         if (unit === "GM") {
-            pricePerUnit = (entry.price / qty) * 1000;
+            pricePerUnit = entry.price * 1000;
             unit = "KG";
         }
 

@@ -13,6 +13,9 @@ const bazarEntrySchema = new Schema<BazarEntry>(
             required: [true, "Price is required"],
             min: [0.01, "Price must be greater than 0"],
         },
+        totalPrice: {
+            type: Number,
+        },
         quantity: {
             type: Number,
             required: [true, "Quantity is required"],

@@ -5,6 +5,7 @@ export type BazarUnit = "KG" | "PIECE" | "GM";
 export interface BazarEntry {
     product: Types.ObjectId;
     price: number;
+    totalPrice?: number;
     quantity: number;
     unit?: BazarUnit;
     date: Date;

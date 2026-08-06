@@ -15,16 +15,34 @@ const createBazarEntry = async (
     payload: {
         productId?: string;
         name: string;
-        price: number;
+        price?: number;
+        totalPrice?: number;
         quantity?: number;
         unit?: BazarUnit;
         notes?: string;
         date?: Date;
     },
 ) => {
-    const { productId, name, price, quantity = 1, unit, notes, date = new Date() } = payload;
-    const priceNum = Number(price);
-    const quantityNum = Number(quantity);
+    const { productId, name, price, totalPrice, quantity = 1, unit, notes, date = new Date() } = payload;
+    const quantityNum = Number(quantity) > 0 ? Number(quantity) : 1;
+
+    let finalPrice: number;
+
+    if (totalPrice !== undefined && totalPrice !== null) {
+        const totalPriceNum = Number(totalPrice);
+        if (isNaN(totalPriceNum) || totalPriceNum < 0) {
+            throw new ApiError(httpStatus.BAD_REQUEST, "Invalid total price");
+        }
+        finalPrice = totalPriceNum / quantityNum;
+    } else if (price !== undefined && price !== null) {
+        const priceNum = Number(price);
+        if (isNaN(priceNum) || priceNum < 0) {
+            throw new ApiError(httpStatus.BAD_REQUEST, "Invalid price");
+        }
+        finalPrice = priceNum;
+    } else {
+        throw new ApiError(httpStatus.BAD_REQUEST, "Either price or totalPrice is required");
+    }
 
     if (!name || !name.trim()) {
         throw new ApiError(httpStatus.BAD_REQUEST, "Product name is required");
@@ -63,12 +81,15 @@ const createBazarEntry = async (
             }
         }
 
+        const calculatedTotalCost = finalPrice * quantityNum;
+
         // 3. Create daily bazar entry under the user's group if they have one
         const [entry] = await BazarEntryModel.create(
             [
                 {
                     product: product._id,
-                    price: priceNum,
+                    price: finalPrice,
+                    totalPrice: calculatedTotalCost,
                     quantity: quantityNum,
                     unit,
                     notes,
@@ -81,7 +102,7 @@ const createBazarEntry = async (
         );
 
         // Log activity in the background
-        activityServices.logActivity(userId, ActivityType.CREATE_BAZAR_ENTRY, `Created daily bazar entry for "${product.name}" (${quantity} ${unit || ""}) with cost of ${price * quantity}`, groupId, { entryId: entry._id });
+        activityServices.logActivity(userId, ActivityType.CREATE_BAZAR_ENTRY, `Created daily bazar entry for "${product.name}" (${quantityNum} ${unit || ""}) with cost of ${calculatedTotalCost}`, groupId, { entryId: entry._id });
 
         await session.commitTransaction();
         session.endSession();
@@ -96,7 +117,7 @@ const createBazarEntry = async (
                     senderId: userId,
                     groupId,
                     title: "New Bazar Entry Added",
-                    message: `${(populatedEntry?.user as any)?.name || "Someone"} added ${(populatedEntry?.product as any)?.name || "an item"} (${quantity} ${unit || ""}) costing ৳${priceNum * quantityNum} to the Bazar list.`,
+                    message: `${(populatedEntry?.user as any)?.name || "Someone"} added ${(populatedEntry?.product as any)?.name || "an item"} (${quantityNum} ${unit || ""}) costing ৳${calculatedTotalCost} to the Bazar list.`,
                     type: "BAZAR",
                 })
                 .catch((err) => {
@@ -185,7 +206,12 @@ const getBazarEntryById = async (userId: string, groupId: string | undefined, id
     return entry;
 };
 
-const updateBazarEntry = async (userId: string, groupId: string | undefined, id: string, data: Partial<BazarEntry>) => {
+const updateBazarEntry = async (
+    userId: string,
+    groupId: string | undefined,
+    id: string,
+    data: Partial<BazarEntry> & { totalPrice?: number },
+) => {
     const filter: any = { _id: id, isDeleted: false };
     if (groupId) {
         filter.group = groupId;
@@ -193,7 +219,27 @@ const updateBazarEntry = async (userId: string, groupId: string | undefined, id:
         filter.user = userId;
     }
 
-    const entry = await BazarEntryModel.findOneAndUpdate(filter, { $set: data }, { returnDocument: "after", runValidators: true }).populate("product").populate("user", "name email phone profileImage").populate("group", "name creator");
+    const existingEntry = await BazarEntryModel.findOne(filter);
+    if (!existingEntry) {
+        throw new ApiError(httpStatus.NOT_FOUND, "Bazar entry not found or not authorized");
+    }
+
+    const updateData: any = { ...data };
+
+    const qty = data.quantity !== undefined ? Number(data.quantity) : existingEntry.quantity;
+    const validQty = qty > 0 ? qty : 1;
+
+    if (data.totalPrice !== undefined && data.totalPrice !== null) {
+        updateData.totalPrice = Number(data.totalPrice);
+        updateData.price = updateData.totalPrice / validQty;
+    } else if (data.price !== undefined && data.price !== null) {
+        updateData.price = Number(data.price);
+        updateData.totalPrice = updateData.price * validQty;
+    } else if (data.quantity !== undefined && data.quantity !== null) {
+        updateData.totalPrice = existingEntry.price * validQty;
+    }
+
+    const entry = await BazarEntryModel.findOneAndUpdate(filter, { $set: updateData }, { returnDocument: "after", runValidators: true }).populate("product").populate("user", "name email phone profileImage").populate("group", "name creator");
 
     if (!entry) {
         throw new ApiError(httpStatus.NOT_FOUND, "Bazar entry not found or not authorized");
@@ -307,7 +353,8 @@ const createBulkBazarEntries = async (
         | Array<{
               productId?: string;
               name: string;
-              price: number;
+              price?: number;
+              totalPrice?: number;
               quantity?: number;
               unit?: BazarUnit;
               notes?: string;
@@ -317,7 +364,8 @@ const createBulkBazarEntries = async (
               entries: Array<{
                   productId?: string;
                   name: string;
-                  price: number;
+                  price?: number;
+                  totalPrice?: number;
                   quantity?: number;
                   unit?: BazarUnit;
                   notes?: string;
@@ -338,16 +386,29 @@ const createBulkBazarEntries = async (
         const createdEntryIds: mongoose.Types.ObjectId[] = [];
 
         for (const item of entriesPayload) {
-            const { productId, name, price, quantity = 1, unit, notes, date = new Date() } = item;
-            const priceNum = Number(price);
-            const quantityNum = Number(quantity);
+            const { productId, name, price, totalPrice, quantity = 1, unit, notes, date = new Date() } = item;
+            const quantityNum = Number(quantity) > 0 ? Number(quantity) : 1;
+
+            let finalPrice: number;
+
+            if (totalPrice !== undefined && totalPrice !== null) {
+                const totalPriceNum = Number(totalPrice);
+                if (isNaN(totalPriceNum) || totalPriceNum < 0) {
+                    throw new ApiError(httpStatus.BAD_REQUEST, `Invalid total price for product "${name}"`);
+                }
+                finalPrice = totalPriceNum / quantityNum;
+            } else if (price !== undefined && price !== null) {
+                const priceNum = Number(price);
+                if (isNaN(priceNum) || priceNum < 0) {
+                    throw new ApiError(httpStatus.BAD_REQUEST, `Invalid price for product "${name}"`);
+                }
+                finalPrice = priceNum;
+            } else {
+                throw new ApiError(httpStatus.BAD_REQUEST, `Either price or totalPrice is required for product "${name}"`);
+            }
 
             if (!name || !name.trim()) {
                 throw new ApiError(httpStatus.BAD_REQUEST, "Product name is required for all entries");
-            }
-
-            if (isNaN(priceNum) || priceNum < 0) {
-                throw new ApiError(httpStatus.BAD_REQUEST, `Invalid price for product "${name}"`);
             }
 
             let product;
@@ -384,7 +445,8 @@ const createBulkBazarEntries = async (
                 [
                     {
                         product: product._id,
-                        price: priceNum,
+                        price: finalPrice,
+                        totalPrice: finalPrice * quantityNum,
                         quantity: quantityNum,
                         unit,
                         notes,
