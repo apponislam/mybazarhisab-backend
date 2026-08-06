@@ -33,7 +33,14 @@ const getExpenseAggregation = async (filter: any, start: Date, end: Date): Promi
         {
             $group: {
                 _id: null,
-                total: { $sum: { $multiply: ["$price", "$quantity"] } },
+                total: {
+                    $sum: {
+                        $ifNull: [
+                            "$totalPrice",
+                            { $multiply: ["$price", { $ifNull: ["$quantity", 1] }] },
+                        ],
+                    },
+                },
             },
         },
     ]);
@@ -76,7 +83,9 @@ const getYearlyTrendAggregation = async (model: any, filter: any, year: number) 
         {
             $group: {
                 _id: { $month: "$date" },
-                total: isBazarModel ? { $sum: { $multiply: ["$price", "$quantity"] } } : { $sum: "$amount" },
+                total: isBazarModel
+                    ? { $sum: { $ifNull: ["$totalPrice", { $multiply: ["$price", { $ifNull: ["$quantity", 1] }] }] } }
+                    : { $sum: "$amount" },
             },
         },
     ]);
@@ -105,7 +114,9 @@ const getMonthlyTrendAggregation = async (model: any, filter: any, year: number,
         {
             $group: {
                 _id: { $dayOfMonth: "$date" },
-                total: isBazarModel ? { $sum: { $multiply: ["$price", "$quantity"] } } : { $sum: "$amount" },
+                total: isBazarModel
+                    ? { $sum: { $ifNull: ["$totalPrice", { $multiply: ["$price", { $ifNull: ["$quantity", 1] }] }] } }
+                    : { $sum: "$amount" },
             },
         },
     ]);
