@@ -280,11 +280,20 @@ const generateInviteCode = async (userId: string) => {
         throw new ApiError(httpStatus.NOT_FOUND, "Group not found");
     }
 
-    // 3. Generate a new code
-    let code = "BAZAR-" + crypto.randomBytes(3).toString("hex").toUpperCase();
+    // 3. Generate a new code using clean alphanumeric helper
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const getCode = () => {
+        let res = "";
+        for (let i = 0; i < 6; i++) {
+            res += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return res;
+    };
+
+    let code = getCode();
     let codeExists = await GroupModel.findOne({ inviteCode: code });
     while (codeExists) {
-        code = "BAZAR-" + crypto.randomBytes(3).toString("hex").toUpperCase();
+        code = getCode();
         codeExists = await GroupModel.findOne({ inviteCode: code });
     }
 

@@ -40,13 +40,23 @@ const groupSchema = new Schema<Group>(
 groupSchema.index({ members: 1, isDeleted: 1 });
 groupSchema.index({ creator: 1, isDeleted: 1 });
 
+// Helper function to generate clean 6-character uppercase alphanumeric code
+const generateCleanInviteCode = (): string => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Excluded confusing chars like 0, O, 1, I
+    let result = "";
+    for (let i = 0; i < 6; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+};
+
 // Pre-save hook to generate unique invite code
 groupSchema.pre("save", async function () {
     if (!this.inviteCode) {
-        let code = "BAZAR-" + crypto.randomBytes(3).toString("hex").toUpperCase();
+        let code = generateCleanInviteCode();
         let codeExists = await mongoose.models.Group.findOne({ inviteCode: code });
         while (codeExists) {
-            code = "BAZAR-" + crypto.randomBytes(3).toString("hex").toUpperCase();
+            code = generateCleanInviteCode();
             codeExists = await mongoose.models.Group.findOne({ inviteCode: code });
         }
         this.inviteCode = code;
