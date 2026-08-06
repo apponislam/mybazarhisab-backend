@@ -116,12 +116,26 @@ const getBazarEntryByIdByAdmin = catchAsync(async (req: Request, res: Response) 
     });
 });
 
+const getGroupProducts = catchAsync(async (req: Request, res: Response) => {
+    const userId = req.user._id;
+    const result = await bazarEntryServices.getGroupProducts(userId.toString(), req.user.groupId?.toString(), req.query);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Group products retrieved successfully",
+        meta: result.meta,
+        data: result.data,
+    });
+});
+
 export const bazarEntryControllers = {
     createBazarEntry,
     createBulkBazarEntries,
     getAllBazarEntries,
     getBazarEntryById,
     getBazarEntryStats,
+    getGroupProducts,
     updateBazarEntry,
     deleteBazarEntry,
     getAllBazarEntriesByAdmin,

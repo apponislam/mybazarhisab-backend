@@ -9,6 +9,7 @@ router.post("/", auth, bazarEntryControllers.createBazarEntry);
 router.post("/bulk", auth, bazarEntryControllers.createBulkBazarEntries);
 router.get("/", auth, bazarEntryControllers.getAllBazarEntries);
 router.get("/stats", auth, bazarEntryControllers.getBazarEntryStats);
+router.get("/products", auth, bazarEntryControllers.getGroupProducts);
 
 router.get("/admin", auth, authorize(["ADMIN"]), bazarEntryControllers.getAllBazarEntriesByAdmin);
 router.get("/admin/:id", auth, authorize(["ADMIN"]), bazarEntryControllers.getBazarEntryByIdByAdmin);

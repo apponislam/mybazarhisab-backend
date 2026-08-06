@@ -469,14 +469,63 @@ const getBazarEntryByIdByAdmin = async (id: string) => {
     return entry;
 };
 
+const getGroupProducts = async (
+    userId: string,
+    groupId: string | undefined,
+    query: { page?: string; limit?: string; searchTerm?: string },
+) => {
+    const { page = 1, limit = 10, searchTerm } = query;
+
+    const filter: any = { isDeleted: false };
+    if (groupId) {
+        filter.group = groupId;
+    } else {
+        filter.user = userId;
+    }
+
+    const productIds = await BazarEntryModel.distinct("product", filter);
+
+    const productFilter: any = {
+        _id: { $in: productIds },
+        isDeleted: false,
+    };
+
+    if (searchTerm && searchTerm.trim()) {
+        productFilter.name = { $regex: searchTerm.trim(), $options: "i" };
+    }
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const products = await ProductModel.find(productFilter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(Number(limit));
+
+    const total = await ProductModel.countDocuments(productFilter);
+
+    return {
+        meta: {
+            page: Number(page),
+            limit: Number(limit),
+            total,
+            totalPages: Math.ceil(total / Number(limit)),
+            hasNext: Number(page) * Number(limit) < total,
+            hasPrev: Number(page) > 1,
+        },
+        data: products,
+    };
+};
+
 export const bazarEntryServices = {
     createBazarEntry,
     createBulkBazarEntries,
     getAllBazarEntries,
     getBazarEntryById,
     getBazarEntryStats,
+    getGroupProducts,
     updateBazarEntry,
     deleteBazarEntry,
     getAllBazarEntriesByAdmin,
     getBazarEntryByIdByAdmin,
 };
+
