@@ -206,7 +206,8 @@ const getBazarEntryById = async (userId: string, groupId: string | undefined, id
     return entry;
 };
 
-const updateBazarEntry = async (userId: string, groupId: string | undefined, id: string, data: Partial<BazarEntry> & { totalPrice?: number }) => {
+const updateBazarEntry = async (userId: string, groupId: string | undefined, id: string, data: any) => {
+    console.log(data);
     const filter: any = { _id: id, isDeleted: false };
     if (groupId) {
         filter.group = groupId;
@@ -219,7 +220,12 @@ const updateBazarEntry = async (userId: string, groupId: string | undefined, id:
         throw new ApiError(httpStatus.NOT_FOUND, "Bazar entry not found or not authorized");
     }
 
-    const updateData: any = { ...data };
+    const { productId, name, ...restData } = data;
+    const updateData: any = { ...restData };
+
+    if (productId) {
+        updateData.product = productId;
+    }
 
     if (data.date) {
         updateData.date = new Date(data.date);
