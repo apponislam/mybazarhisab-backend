@@ -81,7 +81,8 @@ const createBazarEntry = async (
             }
         }
 
-        const calculatedTotalCost = finalPrice * quantityNum;
+        finalPrice = Math.round(finalPrice * 100) / 100;
+        const calculatedTotalCost = Math.round(finalPrice * quantityNum * 100) / 100;
 
         // 3. Create daily bazar entry under the user's group if they have one
         const [entry] = await BazarEntryModel.create(
@@ -235,13 +236,14 @@ const updateBazarEntry = async (userId: string, groupId: string | undefined, id:
     const validQty = qty > 0 ? qty : 1;
 
     if (data.totalPrice !== undefined && data.totalPrice !== null) {
-        updateData.totalPrice = Number(data.totalPrice);
-        updateData.price = updateData.totalPrice / validQty;
+        updateData.totalPrice = Math.round(Number(data.totalPrice) * 100) / 100;
+        updateData.price = Math.round((updateData.totalPrice / validQty) * 100) / 100;
     } else if (data.price !== undefined && data.price !== null) {
-        updateData.price = Number(data.price);
-        updateData.totalPrice = updateData.price * validQty;
+        updateData.price = Math.round(Number(data.price) * 100) / 100;
+        updateData.totalPrice = Math.round((updateData.price * validQty) * 100) / 100;
     } else if (data.quantity !== undefined && data.quantity !== null) {
-        updateData.totalPrice = existingEntry.price * validQty;
+        updateData.price = Math.round(existingEntry.price * 100) / 100;
+        updateData.totalPrice = Math.round((existingEntry.price * validQty) * 100) / 100;
     }
 
     const entry = await BazarEntryModel.findOneAndUpdate(filter, { $set: updateData }, { returnDocument: "after", runValidators: true }).populate("product").populate("user", "name email phone profileImage").populate("group", "name creator");
