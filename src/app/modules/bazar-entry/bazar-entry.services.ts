@@ -206,12 +206,7 @@ const getBazarEntryById = async (userId: string, groupId: string | undefined, id
     return entry;
 };
 
-const updateBazarEntry = async (
-    userId: string,
-    groupId: string | undefined,
-    id: string,
-    data: Partial<BazarEntry> & { totalPrice?: number },
-) => {
+const updateBazarEntry = async (userId: string, groupId: string | undefined, id: string, data: Partial<BazarEntry> & { totalPrice?: number }) => {
     const filter: any = { _id: id, isDeleted: false };
     if (groupId) {
         filter.group = groupId;
@@ -225,6 +220,10 @@ const updateBazarEntry = async (
     }
 
     const updateData: any = { ...data };
+
+    if (data.date) {
+        updateData.date = new Date(data.date);
+    }
 
     const qty = data.quantity !== undefined ? Number(data.quantity) : existingEntry.quantity;
     const validQty = qty > 0 ? qty : 1;
@@ -531,11 +530,7 @@ const getBazarEntryByIdByAdmin = async (id: string) => {
     return entry;
 };
 
-const getGroupProducts = async (
-    userId: string,
-    groupId: string | undefined,
-    query: { page?: string; limit?: string; searchTerm?: string },
-) => {
+const getGroupProducts = async (userId: string, groupId: string | undefined, query: { page?: string; limit?: string; searchTerm?: string }) => {
     const { page = 1, limit = 10, searchTerm } = query;
 
     const filter: any = { isDeleted: false };
@@ -558,10 +553,7 @@ const getGroupProducts = async (
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    const products = await ProductModel.find(productFilter)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(Number(limit));
+    const products = await ProductModel.find(productFilter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit));
 
     const total = await ProductModel.countDocuments(productFilter);
 
@@ -590,4 +582,3 @@ export const bazarEntryServices = {
     getAllBazarEntriesByAdmin,
     getBazarEntryByIdByAdmin,
 };
-
