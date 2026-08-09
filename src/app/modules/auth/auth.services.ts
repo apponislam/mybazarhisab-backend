@@ -171,6 +171,10 @@ const refreshAccessToken = async (refreshToken: string) => {
         const user = await UserModel.findOne({ _id: decoded._id, isDeleted: false }).select("-password");
         if (!user) throw new ApiError(httpStatus.UNAUTHORIZED, "User not registered");
 
+        if (!user.isActive) {
+            throw new ApiError(httpStatus.FORBIDDEN, "Your account has been deactivated. Please contact support.");
+        }
+
         const jwtPayload = {
             _id: user._id,
             name: user.name,
