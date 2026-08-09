@@ -245,25 +245,24 @@ export const sendPasswordResetEmail = (email: string, name: string, otp: string)
 };
 
 /**
- * 6. Staff / Managed Account Reset Email Template
+ * 6. Admin Password Reset / Set Email Template
  */
-export const sendStaffPasswordResetEmail = (email: string, name: string, passwordPlain: string, restaurantName?: string) => {
-    const title = "Your Account Credentials Have Been Reset";
-    const context = restaurantName ? ` associated with <strong>${restaurantName}</strong>` : "";
+export const sendAdminPasswordResetEmail = (email: string, name: string, passwordPlain: string) => {
+    const title = "Your Account Password Has Been Reset";
     const bodyHtml = `
         <h2 style="color: #0f172a; margin-top: 0; margin-bottom: 12px; font-size: 20px; font-weight: 700;">Hello ${name},</h2>
-        <p style="margin-bottom: 20px; color: #475569;">Your account credentials${context} have been reset by your administrator.</p>
+        <p style="margin-bottom: 20px; color: #475569;">Your account password on <strong>Bazar Hisab</strong> has been reset by an administrator.</p>
 
         <div style="background-color: #fffbeb; border-left: 4px solid #e8a020; border-radius: 8px; padding: 20px; margin: 24px 0;">
-            <h4 style="margin: 0 0 12px 0; color: #78350f; font-size: 14px; font-weight: 700;">Temporary Account Details:</h4>
+            <h4 style="margin: 0 0 12px 0; color: #78350f; font-size: 14px; font-weight: 700;">Updated Login Credentials:</h4>
             <p style="margin: 6px 0; color: #475569; font-size: 14px;"><strong>Email:</strong> ${email}</p>
             <p style="margin: 6px 0; color: #475569; font-size: 14px;"><strong>New Password:</strong> <code style="background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-weight: 700;">${passwordPlain}</code></p>
         </div>
 
-        <p style="font-size: 13px; color: #64748b;">Please log in using these details and immediately update your password in Settings for security reasons.</p>
+        <p style="font-size: 13px; color: #64748b;">Please log in using these credentials and update your password in Settings for enhanced security.</p>
     `;
 
-    const html = renderBaseLayout({ preheader: "Your account password has been updated", title, bodyHtml });
+    const html = renderBaseLayout({ preheader: "Your account password has been updated by an admin", title, bodyHtml });
     sendMail(email, title, html);
 };
 

@@ -7,7 +7,7 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { activityServices } from "../activity/activity.services";
 import { ActivityType } from "../activity/activity.interface";
-import { sendOtpEmail, sendVerificationEmail, sendWelcomeEmail, sendEmailUpdateVerification } from "../../../utils/emailTemplates";
+import { sendOtpEmail, sendVerificationEmail, sendWelcomeEmail, sendEmailUpdateVerification, sendAdminPasswordResetEmail } from "../../../utils/emailTemplates";
 
 const registerUser = async (data: any) => {
     // Check existing user
@@ -385,6 +385,9 @@ const setUserPassword = async (userId: string, newPassword: string) => {
     const hashedPassword = await bcrypt.hash(newPassword, Number(config.bcrypt_salt_rounds));
     user.password = hashedPassword;
     await user.save();
+
+    // Send email with updated credentials to user
+    sendAdminPasswordResetEmail(user.email as string, user.name as string, newPassword);
 };
 
 const deleteUser = async (userId: string) => {
