@@ -273,7 +273,7 @@ const getUserDashboardStats = async (userId: string, groupId: string | undefined
     };
 };
 
-const getMonthlyExpenseTrend = async (userId: string, groupId: string | undefined, view: string = "yearly") => {
+const getMonthlyExpenseTrend = async (userId: string, groupId: string | undefined, view: string = "yearly", yearParam?: number) => {
     const groupEntriesFilter: any = { isDeleted: false };
     if (groupId) {
         groupEntriesFilter.group = groupId;
@@ -282,10 +282,10 @@ const getMonthlyExpenseTrend = async (userId: string, groupId: string | undefine
     }
 
     const now = new Date();
+    const year = yearParam && !isNaN(yearParam) ? yearParam : now.getFullYear();
 
     if (view === "monthly") {
         // Daily trend 1-28/29/30/31 of the current month
-        const year = now.getFullYear();
         const month = now.getMonth();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
 
@@ -305,7 +305,6 @@ const getMonthlyExpenseTrend = async (userId: string, groupId: string | undefine
         return trend;
     } else {
         // Yearly trend: Month-wise 12 months (default)
-        const year = now.getFullYear();
         const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
         const [bazarMap, billMap] = await Promise.all([getYearlyTrendAggregation(BazarEntryModel, groupEntriesFilter, year), getYearlyTrendAggregation(BillModel, groupEntriesFilter, year)]);

@@ -30,7 +30,8 @@ const getUserDashboardStats = catchAsync(async (req: Request, res: Response) => 
 const getMonthlyExpenseTrend = catchAsync(async (req: Request, res: Response) => {
     const userId = req.user._id;
     const view = req.query.view as string | undefined;
-    const result = await dashboardServices.getMonthlyExpenseTrend(userId.toString(), req.user.groupId?.toString(), view);
+    const year = req.query.year ? parseInt(req.query.year as string, 10) : undefined;
+    const result = await dashboardServices.getMonthlyExpenseTrend(userId.toString(), req.user.groupId?.toString(), view, year);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
