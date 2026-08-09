@@ -2,6 +2,9 @@ import { sendNodemailerMail } from "./nodemailer";
 import { sendEmailWithResend } from "./resend";
 import config from "../app/config";
 
+/**
+ * Dispatch mail via RESEND or Nodemailer based on environment config
+ */
 const sendMail = (to: string | string[], subject: string, html: string, from?: string) => {
     if (config.mail.driver === "RESEND") {
         sendEmailWithResend({ to, subject, html, from }).catch((error) => {
@@ -12,131 +15,267 @@ const sendMail = (to: string | string[], subject: string, html: string, from?: s
     }
 };
 
+/**
+ * Core HTML Email Wrapper Template
+ * Designed for maximum email client compatibility (Gmail, Outlook, Apple Mail, Mobile)
+ * matching Bazar Hisab's signature Gold (#e8a020) & Dark Espresso (#1a0e07) design language.
+ */
+const renderBaseLayout = ({
+    preheader = "Notification from Bazar Hisab",
+    title,
+    bodyHtml,
+    footerText = "This is an automated email from Bazar Hisab. Please do not reply directly.",
+}: {
+    preheader?: string;
+    title: string;
+    bodyHtml: string;
+    footerText?: string;
+}) => {
+    const currentYear = new Date().getFullYear();
+
+    return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>${title}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+    <!-- Hidden Preheader -->
+    <div style="display: none; font-size: 1px; color: #f8fafc; line-height: 1px; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden;">
+        ${preheader}
+    </div>
+
+    <!-- Outer Container -->
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; padding: 40px 15px;">
+        <tr>
+            <td align="center">
+                <!-- Email Card Container -->
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 560px; background-color: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.04);">
+                    
+                    <!-- Header Bar -->
+                    <tr>
+                        <td style="background-color: #1a0e07; padding: 24px 32px; text-align: center; border-bottom: 3px solid #e8a020;">
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center">
+                                <tr>
+                                    <td style="vertical-align: middle;">
+                                        <img src="https://mybazarhisab.apponislam.top/logo.png" alt="Bazar Hisab Logo" width="36" height="36" style="display: block; width: 36px; height: 36px; border-radius: 8px; border: 0; object-fit: contain; background-color: #e8a020;" />
+                                    </td>
+                                    <td style="padding-left: 12px; font-size: 20px; font-weight: 700; color: #ffffff; letter-spacing: 1px; font-family: 'Segoe UI', sans-serif; vertical-align: middle;">
+                                        BAZAR <span style="color: #e8a020;">HISAB</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Main Content Body -->
+                    <tr>
+                        <td style="padding: 36px 32px 30px 32px; color: #334155; font-size: 15px; line-height: 1.6;">
+                            ${bodyHtml}
+                        </td>
+                    </tr>
+
+                    <!-- Divider -->
+                    <tr>
+                        <td style="padding: 0 32px;">
+                            <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 0;">
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 24px 32px; background-color: #fafafa; text-align: center; color: #94a3b8; font-size: 12px; line-height: 1.5;">
+                            <p style="margin: 0 0 8px 0;">${footerText}</p>
+                            <p style="margin: 0; font-weight: 600; color: #64748b;">
+                                &copy; ${currentYear} Bazar Hisab Platform. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+    `.trim();
+};
+
+/**
+ * 1. Email Verification Template
+ */
 export const sendVerificationEmail = (email: string, name: string, verificationUrl: string, otp?: string) => {
-    const html = `
-        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
-            <h2 style="color: #333;">Hello ${name},</h2>
-            <p style="color: #666;">Please verify your email address by clicking the button below:</p>
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="${verificationUrl}" style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Verify Email</a>
-            </div>
-            <p style="color: #999; font-size: 12px;">Or copy this link: ${verificationUrl}</p>
-            ${
-                otp
-                    ? `<p style="color: #666; font-size: 16px; text-align: center; margin-top: 20px;">Or enter this 6-digit code in the app: <strong>${otp}</strong></p>
-                       <p style="color: #999; font-size: 12px; text-align: center;">OTP expires in 10 minutes.</p>`
-                    : ""
-            }
-            <p style="color: #999; font-size: 12px;">This link expires in 24 hours.</p>
+    const title = "Verify Your Email Address";
+    const bodyHtml = `
+        <h2 style="color: #0f172a; margin-top: 0; margin-bottom: 12px; font-size: 20px; font-weight: 700;">Hello ${name},</h2>
+        <p style="margin-bottom: 24px; color: #475569;">Thank you for signing up for <strong>Bazar Hisab</strong>. Please verify your email address to unlock full access to group expense tracking and daily meal calculations.</p>
+        
+        <!-- CTA Button -->
+        <div style="text-align: center; margin: 32px 0;">
+            <a href="${verificationUrl}" target="_blank" style="background-color: #e8a020; color: #1a0e07; font-weight: 700; font-size: 15px; text-decoration: none; padding: 14px 32px; border-radius: 10px; display: inline-block; box-shadow: 0 4px 12px rgba(232, 160, 32, 0.3);">
+                Verify Email Address
+            </a>
         </div>
+
+        ${
+            otp
+                ? `
+        <!-- OTP Code Box -->
+        <div style="background-color: #fffbeb; border: 1px dashed #fcd34d; border-radius: 10px; padding: 20px; text-align: center; margin: 28px 0;">
+            <p style="margin: 0 0 8px 0; color: #92400e; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Or Enter 6-Digit Code In App</p>
+            <div style="font-size: 32px; font-weight: 800; color: #78350f; letter-spacing: 6px;">${otp}</div>
+            <p style="margin: 8px 0 0 0; color: #b45309; font-size: 12px;">This code expires in 10 minutes.</p>
+        </div>
+        `
+                : ""
+        }
+
+        <p style="margin-top: 24px; font-size: 13px; color: #64748b;">
+            If the button doesn't work, copy and paste this link into your browser:<br>
+            <a href="${verificationUrl}" style="color: #d97706; word-break: break-all;">${verificationUrl}</a>
+        </p>
+        <p style="font-size: 12px; color: #94a3b8; margin-top: 20px;">This verification link expires in 24 hours.</p>
     `;
-    sendMail(email, "Verify Your Email", html);
+
+    const html = renderBaseLayout({ preheader: "Verify your email to start using Bazar Hisab", title, bodyHtml });
+    sendMail(email, title, html);
 };
 
+/**
+ * 2. OTP Code Email Template
+ */
 export const sendOtpEmail = (email: string, otp: string, name?: string) => {
-    const html = `
-        <div style="font-family: Arial, sans-serif; max-width: 400px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
-            <h2 style="color: #333;">${name ? `Hello ${name},` : "Hello,"}</h2>
-            <p style="color: #666;">Your OTP code is:</p>
-            <div style="background: #f5f5f5; padding: 15px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; border-radius: 5px;">
-                ${otp}
-            </div>
-            <p style="color: #999; font-size: 12px; margin-top: 20px;">This code expires in 10 minutes.</p>
+    const title = "Your One-Time Password (OTP)";
+    const recipientName = name ? `Hello ${name},` : "Hello,";
+    const bodyHtml = `
+        <h2 style="color: #0f172a; margin-top: 0; margin-bottom: 12px; font-size: 20px; font-weight: 700;">${recipientName}</h2>
+        <p style="margin-bottom: 20px; color: #475569;">Use the 6-digit OTP code below to complete your authentication or request in <strong>Bazar Hisab</strong>:</p>
+        
+        <div style="background-color: #1a0e07; border-radius: 12px; padding: 24px; text-align: center; margin: 28px 0;">
+            <div style="font-size: 36px; font-weight: 800; color: #e8a020; letter-spacing: 8px; font-family: monospace;">${otp}</div>
+            <p style="margin: 10px 0 0 0; color: #a08060; font-size: 12px;">Valid for the next 10 minutes</p>
         </div>
+
+        <p style="font-size: 13px; color: #64748b; margin: 0;">
+            If you did not request this code, please ignore this email or contact support if you suspect unauthorized activity.
+        </p>
     `;
-    sendMail(email, "Your OTP Code", html);
+
+    const html = renderBaseLayout({ preheader: `Your OTP code is ${otp}`, title, bodyHtml });
+    sendMail(email, title, html);
 };
 
+/**
+ * 3. Welcome Email Template
+ */
 export const sendWelcomeEmail = (email: string, name: string) => {
-    const html = `
-        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
-            <h2 style="color: #333;">Welcome ${name}!</h2>
-            <p style="color: #666;">Thank you for registering. Please verify your email to get started.</p>
+    const title = "Welcome to Bazar Hisab!";
+    const bodyHtml = `
+        <h2 style="color: #0f172a; margin-top: 0; margin-bottom: 12px; font-size: 20px; font-weight: 700;">Welcome, ${name}! 🎉</h2>
+        <p style="margin-bottom: 16px; color: #475569;">We're thrilled to have you join <strong>Bazar Hisab</strong> — your smart assistant for managing mess budgets, daily bazar costs, utility bills, and meal counts with ease.</p>
+        
+        <div style="background-color: #f8fafc; border-left: 4px solid #e8a020; padding: 16px 20px; border-radius: 6px; margin: 24px 0;">
+            <h4 style="margin: 0 0 8px 0; color: #1a0e07; font-size: 15px; font-weight: 700;">What you can do now:</h4>
+            <ul style="margin: 0; padding-left: 20px; color: #475569; font-size: 14px; line-height: 1.6;">
+                <li>Create or join a Mess/Group with your flatmates</li>
+                <li>Add daily bazar expenses & auto-calculate meal rates</li>
+                <li>Track monthly summary reports & individual member balances</li>
+            </ul>
         </div>
+
+        <p style="margin-top: 20px; color: #475569;">If you ever need help or have questions, reach out to our team anytime.</p>
     `;
-    sendMail(email, "Welcome to Our Platform", html);
+
+    const html = renderBaseLayout({ preheader: `Welcome to Bazar Hisab, ${name}!`, title, bodyHtml });
+    sendMail(email, title, html);
 };
 
+/**
+ * 4. Email Update Verification Template
+ */
 export const sendEmailUpdateVerification = (email: string, name: string, verificationUrl: string) => {
-    const html = `
-        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
-            <h2 style="color: #333;">Hello ${name},</h2>
-            <p style="color: #666;">Please verify your new email address by clicking the button below:</p>
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="${verificationUrl}" style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Verify New Email</a>
-            </div>
-            <p style="color: #999; font-size: 12px;">This link expires in 24 hours.</p>
+    const title = "Verify Your New Email Address";
+    const bodyHtml = `
+        <h2 style="color: #0f172a; margin-top: 0; margin-bottom: 12px; font-size: 20px; font-weight: 700;">Hello ${name},</h2>
+        <p style="margin-bottom: 24px; color: #475569;">You recently requested to update your registered email address on <strong>Bazar Hisab</strong>. Please confirm this change by clicking below:</p>
+        
+        <div style="text-align: center; margin: 32px 0;">
+            <a href="${verificationUrl}" target="_blank" style="background-color: #e8a020; color: #1a0e07; font-weight: 700; font-size: 15px; text-decoration: none; padding: 14px 32px; border-radius: 10px; display: inline-block; box-shadow: 0 4px 12px rgba(232, 160, 32, 0.3);">
+                Confirm New Email
+            </a>
         </div>
+
+        <p style="font-size: 13px; color: #64748b;">
+            If you did not request an email update, please change your password immediately or contact our support team.
+        </p>
     `;
-    sendMail(email, "Verify Your New Email", html);
+
+    const html = renderBaseLayout({ preheader: "Confirm your new email address for Bazar Hisab", title, bodyHtml });
+    sendMail(email, title, html);
 };
 
-export const sendZoomMeetingInvitation = (email: string, name: string, topic: string, meetingId: string, joinUrl: string, startTime: string) => {
-    const html = `
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden; background-color: #ffffff;">
-            <div style="background-color: #2D8CFF; padding: 20px; text-align: center;">
-                <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Zoom Meeting Invitation</h1>
-            </div>
-            <div style="padding: 30px; color: #333333; line-height: 1.6;">
-                <h2 style="color: #2D8CFF; margin-top: 0;">Hello ${name},</h2>
-                <p style="font-size: 16px;">You have been invited to join a Zoom meeting for the class: <strong>${topic}</strong>.</p>
-                
-                <div style="background-color: #f8f9fa; border-left: 4px solid #2D8CFF; padding: 15px; margin: 25px 0;">
-                    <p style="margin: 5px 0;"><strong>Topic:</strong> ${topic}</p>
-                    <p style="margin: 5px 0;"><strong>Start Time:</strong> ${new Date(startTime).toLocaleString()}</p>
-                    <p style="margin: 5px 0;"><strong>Meeting ID:</strong> ${meetingId}</p>
-                </div>
-
-                <div style="text-align: center; margin: 35px 0;">
-                    <a href="${joinUrl}" style="background-color: #2D8CFF; color: #ffffff; padding: 14px 35px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(45, 140, 255, 0.2);">Join Meeting</a>
-                </div>
-
-                <p style="font-size: 14px; color: #666666;">If the button doesn't work, you can copy and paste this link into your browser:</p>
-                <p style="font-size: 12px; word-break: break-all; color: #2D8CFF;">${joinUrl}</p>
-                
-                <hr style="border: 0; border-top: 1px solid #eeeeee; margin: 30px 0;">
-                <p style="font-size: 12px; color: #999999; text-align: center;">Please make sure you have Zoom installed on your device before the meeting starts.</p>
-            </div>
-            <div style="background-color: #f4f4f4; padding: 15px; text-align: center; font-size: 12px; color: #777777;">
-                &copy; ${new Date().getFullYear()} lolfortnite650. All rights reserved.
-            </div>
+/**
+ * 5. Password Reset Email Template
+ */
+export const sendPasswordResetEmail = (email: string, name: string, resetUrl: string, otp?: string) => {
+    const title = "Reset Your Password";
+    const bodyHtml = `
+        <h2 style="color: #0f172a; margin-top: 0; margin-bottom: 12px; font-size: 20px; font-weight: 700;">Hello ${name},</h2>
+        <p style="margin-bottom: 24px; color: #475569;">We received a request to reset your password for your <strong>Bazar Hisab</strong> account.</p>
+        
+        <div style="text-align: center; margin: 32px 0;">
+            <a href="${resetUrl}" target="_blank" style="background-color: #e8a020; color: #1a0e07; font-weight: 700; font-size: 15px; text-decoration: none; padding: 14px 32px; border-radius: 10px; display: inline-block; box-shadow: 0 4px 12px rgba(232, 160, 32, 0.3);">
+                Reset Password
+            </a>
         </div>
+
+        ${
+            otp
+                ? `
+        <div style="background-color: #1a0e07; border-radius: 10px; padding: 20px; text-align: center; margin: 28px 0;">
+            <p style="margin: 0 0 6px 0; color: #a08060; font-size: 12px; text-transform: uppercase;">Or Use Reset Code</p>
+            <div style="font-size: 32px; font-weight: 800; color: #e8a020; letter-spacing: 6px;">${otp}</div>
+        </div>
+        `
+                : ""
+        }
+
+        <p style="font-size: 12px; color: #94a3b8; margin-top: 20px;">This password reset link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
     `;
-    sendMail(email, `Meeting Invitation: ${topic}`, html);
+
+    const html = renderBaseLayout({ preheader: "Instructions to reset your Bazar Hisab password", title, bodyHtml });
+    sendMail(email, title, html);
 };
 
-export const sendStaffWelcomeEmail = (email: string, name: string, passwordPlain: string, restaurantName: string) => {
-    const html = `
-        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
-            <h2 style="color: #333;">Welcome ${name}!</h2>
-            <p style="color: #666;">You have been registered as a staff member for <strong>${restaurantName}</strong>.</p>
-            <p style="color: #666;">Here are your account credentials to log in:</p>
-            <div style="background-color: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0;">
-                <p style="margin: 5px 0;"><strong>Email:</strong> ${email}</p>
-                <p style="margin: 5px 0;"><strong>Password:</strong> ${passwordPlain}</p>
-            </div>
-            <p style="color: #666;">Please change your password after logging in for security reasons.</p>
+/**
+ * 6. Staff / Managed Account Reset Email Template
+ */
+export const sendStaffPasswordResetEmail = (email: string, name: string, passwordPlain: string, restaurantName?: string) => {
+    const title = "Your Account Credentials Have Been Reset";
+    const context = restaurantName ? ` associated with <strong>${restaurantName}</strong>` : "";
+    const bodyHtml = `
+        <h2 style="color: #0f172a; margin-top: 0; margin-bottom: 12px; font-size: 20px; font-weight: 700;">Hello ${name},</h2>
+        <p style="margin-bottom: 20px; color: #475569;">Your account credentials${context} have been reset by your administrator.</p>
+
+        <div style="background-color: #fffbeb; border-left: 4px solid #e8a020; border-radius: 8px; padding: 20px; margin: 24px 0;">
+            <h4 style="margin: 0 0 12px 0; color: #78350f; font-size: 14px; font-weight: 700;">Temporary Account Details:</h4>
+            <p style="margin: 6px 0; color: #475569; font-size: 14px;"><strong>Email:</strong> ${email}</p>
+            <p style="margin: 6px 0; color: #475569; font-size: 14px;"><strong>New Password:</strong> <code style="background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-weight: 700;">${passwordPlain}</code></p>
         </div>
+
+        <p style="font-size: 13px; color: #64748b;">Please log in using these details and immediately update your password in Settings for security reasons.</p>
     `;
-    sendMail(email, `Welcome to ${restaurantName} - Staff Account Details`, html);
+
+    const html = renderBaseLayout({ preheader: "Your account password has been updated", title, bodyHtml });
+    sendMail(email, title, html);
 };
 
-export const sendStaffPasswordResetEmail = (email: string, name: string, passwordPlain: string, restaurantName: string) => {
-    const html = `
-        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
-            <h2 style="color: #333;">Hello ${name},</h2>
-            <p style="color: #666;">Your password has been reset by the restaurant owner${restaurantName ? ` of <strong>${restaurantName}</strong>` : ""}.</p>
-            <p style="color: #666;">Here are your new account credentials to log in:</p>
-            <div style="background-color: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0;">
-                <p style="margin: 5px 0;"><strong>Email:</strong> ${email}</p>
-                <p style="margin: 5px 0;"><strong>Password:</strong> ${passwordPlain}</p>
-            </div>
-            <p style="color: #666;">Please change your password after logging in for security reasons.</p>
-        </div>
-    `;
-    sendMail(email, `Your Staff Account Password Has Been Reset`, html);
-};
-
+/**
+ * 7. Contact Support Response Email Template
+ */
 export const sendContactReplyEmail = (
     email: string,
     recipientName: string,
@@ -144,30 +283,57 @@ export const sendContactReplyEmail = (
     messageContent: string,
     replyMessage: string
 ) => {
-    const html = `
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 550px; margin: 0 auto; padding: 25px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);">
-            <div style="text-align: center; border-bottom: 2px solid #edf2f7; padding-bottom: 15px; margin-bottom: 20px;">
-                <h2 style="color: #2d3748; margin: 0; font-size: 22px; font-weight: 700;">Bazar Hisab</h2>
-                <p style="color: #718096; margin: 5px 0 0 0; font-size: 14px;">Contact Support Response</p>
-            </div>
-            
-            <p style="color: #4a5568; font-size: 16px; line-height: 1.5; margin-top: 0;">Hello <strong>${recipientName}</strong>,</p>
-            <p style="color: #4a5568; font-size: 15px; line-height: 1.5;">This is a reply to your message regarding: <strong>"${subject}"</strong>.</p>
-            
-            <div style="background-color: #f7fafc; border-left: 4px solid #e2e8f0; padding: 12px 16px; margin: 15px 0; color: #718096; font-style: italic; font-size: 14px;">
-                "${messageContent}"
-            </div>
+    const title = `Re: ${subject}`;
+    const bodyHtml = `
+        <h2 style="color: #0f172a; margin-top: 0; margin-bottom: 12px; font-size: 20px; font-weight: 700;">Hello ${recipientName},</h2>
+        <p style="margin-bottom: 16px; color: #475569;">Thank you for contacting <strong>Bazar Hisab Support</strong> regarding: <strong>"${subject}"</strong>.</p>
+        
+        <!-- Original Message Quote -->
+        <div style="background-color: #f8fafc; border-left: 3px solid #cbd5e1; padding: 12px 16px; margin: 16px 0; color: #64748b; font-style: italic; font-size: 14px;">
+            "${messageContent}"
+        </div>
 
-            <div style="margin: 20px 0; padding: 18px; background-color: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 4px; color: #1e293b; font-size: 15px; line-height: 1.6;">
-                <h4 style="margin: 0 0 8px 0; color: #166534; font-weight: 600;">Support Reply:</h4>
+        <!-- Official Support Reply Box -->
+        <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 8px; padding: 20px; margin: 24px 0;">
+            <h4 style="margin: 0 0 10px 0; color: #166534; font-weight: 700; font-size: 15px;">Support Team Response:</h4>
+            <div style="color: #1e293b; font-size: 15px; line-height: 1.6;">
                 ${replyMessage.replace(/\n/g, "<br/>")}
             </div>
-            
-            <p style="color: #a0aec0; font-size: 12px; text-align: center; margin-top: 30px; border-top: 1px solid #edf2f7; padding-top: 15px;">
-                This email was sent by Bazar Hisab Support. Please do not reply directly to this email.
-            </p>
         </div>
+
+        <p style="font-size: 13px; color: #64748b; margin-top: 24px;">If you have further questions or need additional assistance, feel free to submit another query.</p>
     `;
-    sendMail(email, `Re: ${subject}`, html);
+
+    const html = renderBaseLayout({ preheader: `Support response regarding "${subject}"`, title, bodyHtml });
+    sendMail(email, title, html);
 };
 
+/**
+ * 8. Group Invitation Email Template
+ */
+export const sendGroupInvitationEmail = (
+    email: string,
+    name: string,
+    groupName: string,
+    inviteUrl: string,
+    inviterName: string
+) => {
+    const title = `Invitation to join "${groupName}" on Bazar Hisab`;
+    const bodyHtml = `
+        <h2 style="color: #0f172a; margin-top: 0; margin-bottom: 12px; font-size: 20px; font-weight: 700;">Hello ${name},</h2>
+        <p style="margin-bottom: 20px; color: #475569;"><strong>${inviterName}</strong> has invited you to join the mess/group <strong>"${groupName}"</strong> on Bazar Hisab.</p>
+
+        <div style="text-align: center; margin: 32px 0;">
+            <a href="${inviteUrl}" target="_blank" style="background-color: #e8a020; color: #1a0e07; font-weight: 700; font-size: 15px; text-decoration: none; padding: 14px 32px; border-radius: 10px; display: inline-block; box-shadow: 0 4px 12px rgba(232, 160, 32, 0.3);">
+                Accept Invitation
+            </a>
+        </div>
+
+        <p style="font-size: 13px; color: #64748b;">
+            By joining, you will be able to submit daily expenses, record meals, and view real-time monthly reports.
+        </p>
+    `;
+
+    const html = renderBaseLayout({ preheader: `${inviterName} invited you to join ${groupName}`, title, bodyHtml });
+    sendMail(email, title, html);
+};
