@@ -277,7 +277,7 @@
                             <table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center">
                                 <tr>
                                     <td style="vertical-align: middle;">
-                                        <img src="/logo.png" alt="Bazar Hisab Logo" width="34" height="34" style="display: block; width: 34px; height: 34px; border-radius: 8px; border: 0; object-fit: contain; background-color: #e8a020;" />
+                                        <img src="${window.location.origin}/logo.png" alt="Bazar Hisab Logo" width="34" height="34" style="display: block; width: 34px; height: 34px; border-radius: 8px; border: 0; object-fit: contain; background-color: #e8a020;" onerror="this.src='https://mybazarhisab-backend.vercel.app/logo.png'" />
                                     </td>
                                     <td style="padding-left: 10px; font-size: 18px; font-weight: 700; color: #ffffff; letter-spacing: 1px; vertical-align: middle;">
                                         BAZAR <span style="color: #e8a020;">HISAB</span>
@@ -324,9 +324,9 @@
                             title: "Verify Your Email Address",
                             bodyHtml: `
                         <h2 style="color: #0f172a; margin-top: 0; margin-bottom: 12px; font-size: 20px; font-weight: 700;">Hello Appon Islam,</h2>
-                        <p style="margin-bottom: 24px; color: #475569;">Thank you for signing up for <strong>Bazar Hisab</strong>. Please verify your email address to unlock full access to group expense tracking and daily meal calculations.</p>
+                        <p style="margin-bottom: 24px; color: #475569;">Thank you for signing up for <strong>Bazar Hisab</strong>. Please verify your email address to start tracking your family and group expenses, utility bills, and daily spending with ease.</p>
                         <div style="text-align: center; margin: 32px 0;">
-                            <a href="https://bazarhisab.com/verify?token=sample123" target="_blank" style="background-color: #e8a020; color: #1a0e07; font-weight: 700; font-size: 15px; text-decoration: none; padding: 14px 32px; border-radius: 10px; display: inline-block; box-shadow: 0 4px 12px rgba(232, 160, 32, 0.3);">
+                            <a href="http://localhost:3000/verify-email?token=sample123&email=apponislam@example.com" target="_blank" style="background-color: #e8a020; color: #1a0e07; font-weight: 700; font-size: 15px; text-decoration: none; padding: 14px 32px; border-radius: 10px; display: inline-block; box-shadow: 0 4px 12px rgba(232, 160, 32, 0.3);">
                                 Verify Email Address
                             </a>
                         </div>
@@ -337,7 +337,7 @@
                         </div>
                         <p style="margin-top: 24px; font-size: 13px; color: #64748b;">
                             If the button doesn't work, copy and paste this link into your browser:<br>
-                            <a href="https://bazarhisab.com/verify?token=sample123" style="color: #d97706;">https://bazarhisab.com/verify?token=sample123</a>
+                            <a href="http://localhost:3000/verify-email?token=sample123&email=apponislam@example.com" style="color: #d97706;">http://localhost:3000/verify-email?token=sample123&email=apponislam@example.com</a>
                         </p>
                     `,
                         }),
@@ -373,13 +373,13 @@
                             title: "Welcome to Bazar Hisab!",
                             bodyHtml: `
                         <h2 style="color: #0f172a; margin-top: 0; margin-bottom: 12px; font-size: 20px; font-weight: 700;">Welcome, Appon Islam! 🎉</h2>
-                        <p style="margin-bottom: 16px; color: #475569;">We're thrilled to have you join <strong>Bazar Hisab</strong> — your smart assistant for managing mess budgets, daily bazar costs, utility bills, and meal counts with ease.</p>
+                        <p style="margin-bottom: 16px; color: #475569;">We're thrilled to have you join <strong>Bazar Hisab</strong> — your smart assistant for managing family & mess budgets, daily bazar expenses, utility bills, and monthly spending with ease.</p>
                         <div style="background-color: #f8fafc; border-left: 4px solid #e8a020; padding: 16px 20px; border-radius: 6px; margin: 24px 0;">
                             <h4 style="margin: 0 0 8px 0; color: #1a0e07; font-size: 15px; font-weight: 700;">What you can do now:</h4>
                             <ul style="margin: 0; padding-left: 20px; color: #475569; font-size: 14px; line-height: 1.6;">
-                                <li>Create or join a Mess/Group with your flatmates</li>
-                                <li>Add daily bazar expenses & auto-calculate meal rates</li>
-                                <li>Track monthly summary reports & individual member balances</li>
+                                <li>Create or join a Group with your family or flatmates</li>
+                                <li>Add daily bazar expenses, grocery items & utility bills</li>
+                                <li>Calculate total monthly spending & track individual member balances</li>
                             </ul>
                         </div>
                         <p style="margin-top: 20px; color: #475569;">If you ever need help or have questions, reach out to our team anytime.</p>
@@ -398,7 +398,7 @@
                         <h2 style="color: #0f172a; margin-top: 0; margin-bottom: 12px; font-size: 20px; font-weight: 700;">Hello Appon Islam,</h2>
                         <p style="margin-bottom: 24px; color: #475569;">You recently requested to update your registered email address on <strong>Bazar Hisab</strong>. Please confirm this change by clicking below:</p>
                         <div style="text-align: center; margin: 32px 0;">
-                            <a href="https://bazarhisab.com/verify-new-email?token=newemail123" target="_blank" style="background-color: #e8a020; color: #1a0e07; font-weight: 700; font-size: 15px; text-decoration: none; padding: 14px 32px; border-radius: 10px; display: inline-block; box-shadow: 0 4px 12px rgba(232, 160, 32, 0.3);">
+                            <a href="http://localhost:3000/verify-new-email?token=newemail123&email=appon.new@example.com" target="_blank" style="background-color: #e8a020; color: #1a0e07; font-weight: 700; font-size: 15px; text-decoration: none; padding: 14px 32px; border-radius: 10px; display: inline-block; box-shadow: 0 4px 12px rgba(232, 160, 32, 0.3);">
                                 Confirm New Email
                             </a>
                         </div>
@@ -418,16 +418,13 @@
                             title: "Reset Your Password",
                             bodyHtml: `
                         <h2 style="color: #0f172a; margin-top: 0; margin-bottom: 12px; font-size: 20px; font-weight: 700;">Hello Appon Islam,</h2>
-                        <p style="margin-bottom: 24px; color: #475569;">We received a request to reset your password for your <strong>Bazar Hisab</strong> account.</p>
-                        <div style="text-align: center; margin: 32px 0;">
-                            <a href="https://bazarhisab.com/reset-password?token=reset789" target="_blank" style="background-color: #e8a020; color: #1a0e07; font-weight: 700; font-size: 15px; text-decoration: none; padding: 14px 32px; border-radius: 10px; display: inline-block; box-shadow: 0 4px 12px rgba(232, 160, 32, 0.3);">
-                                Reset Password
-                            </a>
+                        <p style="margin-bottom: 20px; color: #475569;">We received a request to reset your password for your <strong>Bazar Hisab</strong> account. Use the 6-digit OTP code below in the app to set a new password:</p>
+                        <div style="background-color: #1a0e07; border-radius: 12px; padding: 24px; text-align: center; margin: 28px 0;">
+                            <p style="margin: 0 0 8px 0; color: #a08060; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Password Reset OTP Code</p>
+                            <div style="font-size: 36px; font-weight: 800; color: #e8a020; letter-spacing: 8px; font-family: monospace;">918234</div>
+                            <p style="margin: 10px 0 0 0; color: #a08060; font-size: 12px;">Valid for the next 10 minutes</p>
                         </div>
-                        <div style="background-color: #1a0e07; border-radius: 10px; padding: 20px; text-align: center; margin: 28px 0;">
-                            <p style="margin: 0 0 6px 0; color: #a08060; font-size: 12px; text-transform: uppercase;">Or Use Reset Code</p>
-                            <div style="font-size: 32px; font-weight: 800; color: #e8a020; letter-spacing: 6px;">918234</div>
-                        </div>
+                        <p style="font-size: 12px; color: #94a3b8; margin-top: 20px;">This code expires in 10 minutes. If you didn't request a password reset, please ignore this email or contact support.</p>
                     `,
                         }),
                 },
@@ -443,12 +440,12 @@
                         <h2 style="color: #0f172a; margin-top: 0; margin-bottom: 12px; font-size: 20px; font-weight: 700;">Hello Tanvir,</h2>
                         <p style="margin-bottom: 20px; color: #475569;"><strong>Appon Islam</strong> has invited you to join the mess/group <strong>"Uttara Green Mess"</strong> on Bazar Hisab.</p>
                         <div style="text-align: center; margin: 32px 0;">
-                            <a href="https://bazarhisab.com/invite/group123" target="_blank" style="background-color: #e8a020; color: #1a0e07; font-weight: 700; font-size: 15px; text-decoration: none; padding: 14px 32px; border-radius: 10px; display: inline-block; box-shadow: 0 4px 12px rgba(232, 160, 32, 0.3);">
+                            <a href="http://localhost:3000/join-group?code=ABC123" target="_blank" style="background-color: #e8a020; color: #1a0e07; font-weight: 700; font-size: 15px; text-decoration: none; padding: 14px 32px; border-radius: 10px; display: inline-block; box-shadow: 0 4px 12px rgba(232, 160, 32, 0.3);">
                                 Accept Invitation
                             </a>
                         </div>
                         <p style="font-size: 13px; color: #64748b;">
-                            By joining, you will be able to submit daily expenses, record meals, and view real-time monthly reports.
+                            By joining, you will be able to submit daily expenses, track utility bills, and view real-time monthly spending reports.
                         </p>
                     `,
                         }),

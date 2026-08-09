@@ -19,6 +19,7 @@ export default {
 
     jwt_password_reset_secret: process.env.JWT_PASSWORD_RESET_SECRET,
     client_url: process.env.CLIENT_URL,
+    server_url: process.env.SERVER_URL,
 
     mail: {
         driver: process.env.MAIL || "NODEMAILER",

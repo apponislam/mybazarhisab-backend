@@ -54,13 +54,7 @@ const registerUser = async (data: any) => {
     const { password: pwd, verificationToken: vToken, verificationExpiry: vExpiry, verificationCode: vCode, ...userWithoutSensitive } = userObject;
 
     // Log activity in the background
-    activityServices.logActivity(
-        createdUser._id.toString(),
-        ActivityType.REGISTER,
-        `Registered a new account with email ${createdUser.email}`,
-        undefined,
-        { userId: createdUser._id }
-    );
+    activityServices.logActivity(createdUser._id.toString(), ActivityType.REGISTER, `Registered a new account with email ${createdUser.email}`, undefined, { userId: createdUser._id });
 
     return { user: userWithoutSensitive, accessToken, refreshToken };
 };
@@ -76,10 +70,7 @@ const loginUser = async (data: { email: string; password: string }) => {
 
     // Check if active
     if (!user.isActive) {
-        throw new ApiError(
-            httpStatus.FORBIDDEN,
-            "Your account has been deactivated. Please contact support for assistance."
-        );
+        throw new ApiError(httpStatus.FORBIDDEN, "Your account has been deactivated. Please contact support for assistance.");
     }
 
     // Update last login
@@ -99,13 +90,7 @@ const loginUser = async (data: { email: string; password: string }) => {
     const { password, ...userWithoutPassword } = user.toObject();
 
     // Log activity in the background
-    activityServices.logActivity(
-        user._id.toString(),
-        ActivityType.LOGIN,
-        `Logged into the application`,
-        user.groupId?.toString(),
-        { userId: user._id }
-    );
+    activityServices.logActivity(user._id.toString(), ActivityType.LOGIN, `Logged into the application`, user.groupId?.toString(), { userId: user._id });
 
     return { user: userWithoutPassword, accessToken, refreshToken };
 };
@@ -141,13 +126,7 @@ const verifyEmail = async (email: string, token?: string, otp?: string) => {
     await user.save();
 
     // Log activity in the background
-    activityServices.logActivity(
-        user._id.toString(),
-        ActivityType.EMAIL_VERIFY,
-        `Verified email address successfully`,
-        user.groupId?.toString(),
-        { userId: user._id }
-    );
+    activityServices.logActivity(user._id.toString(), ActivityType.EMAIL_VERIFY, `Verified email address successfully`, user.groupId?.toString(), { userId: user._id });
 
     return { message: "Email verified successfully" };
 };
@@ -292,13 +271,7 @@ const resetPassword = async (token: string, newPassword: string) => {
     await user.save();
 
     // Log activity in the background
-    activityServices.logActivity(
-        user._id.toString(),
-        ActivityType.PASSWORD_RESET,
-        `Reset password using password recovery link`,
-        user.groupId?.toString(),
-        { userId: user._id }
-    );
+    activityServices.logActivity(user._id.toString(), ActivityType.PASSWORD_RESET, `Reset password using password recovery link`, user.groupId?.toString(), { userId: user._id });
 };
 
 const updateProfile = async (userId: string, data: any) => {
@@ -307,13 +280,7 @@ const updateProfile = async (userId: string, data: any) => {
     if (!user) throw new ApiError(httpStatus.NOT_FOUND, "User not registered");
 
     // Log activity in the background
-    activityServices.logActivity(
-        userId,
-        ActivityType.PROFILE_UPDATE,
-        `Updated profile information`,
-        user.groupId?.toString(),
-        { userId: user._id }
-    );
+    activityServices.logActivity(userId, ActivityType.PROFILE_UPDATE, `Updated profile information`, user.groupId?.toString(), { userId: user._id });
 
     return user;
 };
@@ -330,13 +297,7 @@ const changePassword = async (userId: string, currentPassword: string, newPasswo
     await user.save();
 
     // Log activity in the background
-    activityServices.logActivity(
-        userId,
-        ActivityType.PASSWORD_CHANGE,
-        `Changed profile password`,
-        user.groupId?.toString(),
-        { userId: user._id }
-    );
+    activityServices.logActivity(userId, ActivityType.PASSWORD_CHANGE, `Changed profile password`, user.groupId?.toString(), { userId: user._id });
 };
 
 const updateEmail = async (userId: string, newEmail: string, password: string) => {
@@ -408,13 +369,7 @@ const verifyNewEmail = async (token: string, email: string) => {
     await user.save();
 
     // Log activity in the background
-    activityServices.logActivity(
-        user._id.toString(),
-        ActivityType.EMAIL_UPDATE,
-        `Updated account email to ${email}`,
-        user.groupId?.toString(),
-        { userId: user._id }
-    );
+    activityServices.logActivity(user._id.toString(), ActivityType.EMAIL_UPDATE, `Updated account email to ${email}`, user.groupId?.toString(), { userId: user._id });
 
     return { message: "New email verified successfully" };
 };
@@ -428,20 +383,12 @@ const setUserPassword = async (userId: string, newPassword: string) => {
     await user.save();
 };
 
-
-
 const deleteUser = async (userId: string) => {
     const user = await UserModel.findByIdAndUpdate(userId, { $set: { isDeleted: true } }, { returnDocument: "after" });
     if (!user) throw new ApiError(httpStatus.NOT_FOUND, "User not found");
 
     // Log activity in the background
-    activityServices.logActivity(
-        userId,
-        ActivityType.USER_DELETE,
-        `Deleted user account (soft delete)`,
-        user.groupId?.toString(),
-        { userId: user._id }
-    );
+    activityServices.logActivity(userId, ActivityType.USER_DELETE, `Deleted user account (soft delete)`, user.groupId?.toString(), { userId: user._id });
 
     return user;
 };
