@@ -324,6 +324,98 @@ const getMonthlyExpenseTrend = async (userId: string, groupId: string | undefine
     }
 };
 
+const getGroupMonthlyCalendar = async (userId: string, groupId: string | undefined, query: { year?: string; month?: string; groupId?: string }) => {
+    const now = new Date();
+    const year = query.year && !isNaN(parseInt(query.year, 10)) ? parseInt(query.year, 10) : now.getFullYear();
+
+    let monthNumber: number;
+    let monthIndex: number;
+
+    if (query.month !== undefined && query.month !== "") {
+        const parsedMonth = parseInt(query.month, 10);
+        if (!isNaN(parsedMonth)) {
+            if (parsedMonth >= 1 && parsedMonth <= 12) {
+                monthNumber = parsedMonth;
+                monthIndex = parsedMonth - 1;
+            } else if (parsedMonth === 0) {
+                monthNumber = 1;
+                monthIndex = 0;
+            } else {
+                monthIndex = now.getMonth();
+                monthNumber = monthIndex + 1;
+            }
+        } else {
+            monthIndex = now.getMonth();
+            monthNumber = monthIndex + 1;
+        }
+    } else {
+        monthIndex = now.getMonth();
+        monthNumber = monthIndex + 1;
+    }
+
+    const targetGroupId = query.groupId || groupId;
+    const groupEntriesFilter: any = { isDeleted: false };
+    if (targetGroupId) {
+        groupEntriesFilter.group = targetGroupId;
+    } else {
+        groupEntriesFilter.user = userId;
+    }
+
+    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+    const [bazarMap, billMap] = await Promise.all([
+        getMonthlyTrendAggregation(BazarEntryModel, groupEntriesFilter, year, monthIndex),
+        getMonthlyTrendAggregation(BillModel, groupEntriesFilter, year, monthIndex),
+    ]);
+
+    const monthNames = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December",
+    ];
+    const monthName = monthNames[monthIndex];
+
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+    const days = [];
+    let totalExpense = 0;
+    let totalBill = 0;
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const bazarExpense = bazarMap[day] || 0;
+        const billExpense = billMap[day] || 0;
+        const dayTotal = bazarExpense + billExpense;
+
+        totalExpense += bazarExpense;
+        totalBill += billExpense;
+
+        const dateObj = new Date(year, monthIndex, day);
+        const formattedDate = `${year}-${String(monthNumber).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        const dayOfWeek = dayNames[dateObj.getDay()];
+
+        days.push({
+            date: formattedDate,
+            day,
+            dayOfWeek,
+            expense: parseFloat(bazarExpense.toFixed(2)),
+            bill: parseFloat(billExpense.toFixed(2)),
+            total: parseFloat(dayTotal.toFixed(2)),
+        });
+    }
+
+    return {
+        year,
+        month: monthNumber,
+        monthName,
+        daysInMonth,
+        summary: {
+            totalExpense: parseFloat(totalExpense.toFixed(2)),
+            totalBill: parseFloat(totalBill.toFixed(2)),
+            grandTotal: parseFloat((totalExpense + totalBill).toFixed(2)),
+        },
+        days,
+    };
+};
+
+
 const getProductPriceGrowthTrend = async (userId: string, groupId: string | undefined, productId: string, query: { page?: string; limit?: string }) => {
     const { page = 1, limit = 10 } = query;
 
@@ -886,6 +978,7 @@ export const dashboardServices = {
     getAdminMonthlyAnalysis,
     getUserDashboardStats,
     getMonthlyExpenseTrend,
+    getGroupMonthlyCalendar,
     getProductPriceGrowthTrend,
     getStatementHtml,
     getStatementPdf,

@@ -91,11 +91,25 @@ const getAdminMonthlyAnalysis = catchAsync(async (req: Request, res: Response) =
     });
 });
 
+const getGroupMonthlyCalendar = catchAsync(async (req: Request, res: Response) => {
+    const userId = req.user._id;
+    const groupId = req.user.groupId?.toString();
+    const result = await dashboardServices.getGroupMonthlyCalendar(userId.toString(), groupId, req.query as any);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "Group monthly calendar statistics retrieved successfully",
+        data: result,
+    });
+});
+
 export const dashboardControllers = {
     getAdminDashboardStats,
     getAdminMonthlyAnalysis,
     getUserDashboardStats,
     getMonthlyExpenseTrend,
+    getGroupMonthlyCalendar,
     getProductPriceGrowthTrend,
     getStatementPdf,
     getStatementHtml,

@@ -12,6 +12,7 @@ router.get("/admin-monthly-analysis", auth, authorize(["ADMIN"]), dashboardContr
 // User
 router.get("/user-stats", auth, dashboardControllers.getUserDashboardStats);
 router.get("/monthly-trend", auth, dashboardControllers.getMonthlyExpenseTrend);
+router.get("/group-calendar", auth, dashboardControllers.getGroupMonthlyCalendar);
 router.get("/product-price-growth/:productId", auth, dashboardControllers.getProductPriceGrowthTrend);
 router.get("/statement", auth, dashboardControllers.getStatementPdf);
 router.get("/statement-html", auth, dashboardControllers.getStatementHtml);
